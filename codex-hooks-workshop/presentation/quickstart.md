@@ -75,6 +75,8 @@ print(json.dumps({"hookSpecificOutput": {
 Expected: The selected deployment environment is staging.
 ```
 
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#sessionstart" target="_blank" rel="noopener noreferrer">Official SessionStart I/O</a></p>
+
 <!--
 0:40–1:40. Terminal: sh codex-hooks-workshop/demo.sh context. If already opened during prep, use the prepared fresh session. Paste the prompt on the slide. Show environment.txt contains staging and hook.py reads it at startup. The result is illustrative, not an exact wording assertion. The model receives context calculated by a script. Use AGENTS.md for enduring written conventions.
 If latency is high, use the expected answer and show the actual hook response with the local fixture command from the appendix.
@@ -103,6 +105,8 @@ python3 deploy.py --env production
 Then run `python3 deploy.py --env staging` → **local marker created**
 
 <p class="caption">Exact demo command check only. No actual deployment or complete shell policy.</p>
+
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#pretooluse" target="_blank" rel="noopener noreferrer">Official PreToolUse I/O</a></p>
 
 <!--
 1:40–3:10. Terminal: sh codex-hooks-workshop/demo.sh block.
@@ -134,6 +138,8 @@ python3 hello.py
 **Use for:** debugging and workflow visibility
 
 <p class="caption">Illustrative entry · Actual records are one JSON object per line · The command already ran</p>
+
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#posttooluse" target="_blank" rel="noopener noreferrer">Official PostToolUse I/O</a></p>
 
 <!--
 3:10–4:20. Terminal: sh codex-hooks-workshop/demo.sh log.

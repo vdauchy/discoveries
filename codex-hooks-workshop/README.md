@@ -21,6 +21,10 @@ sh codex-hooks-workshop/demo.sh 01
 
 Replace 01 with any ID below. The original context, block, and log aliases still work. Each scenario has its own hook configuration, Python implementation, fixtures, and live guide. The permission scenario starts Codex with read-only sandbox and on-request approvals; the others use normal local policy.
 
+## Official input/output formats
+
+Use the [event-by-event official contract links in COVERAGE.md](COVERAGE.md). Each demo README and mechanism slide also links directly to its event section. Start with the [common input fields](https://learn.chatgpt.com/docs/hooks#common-input-fields) and [common output rules](https://learn.chatgpt.com/docs/hooks#common-output-fields), then read the event-specific additions and restrictions.
+
 ## All scenarios
 
 | ID | Demo | Events |

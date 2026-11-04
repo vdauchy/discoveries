@@ -83,6 +83,8 @@ Source: https://learn.chatgpt.com/docs/hooks
 
 **stderr:** diagnostics · **exit 2:** event-specific denial or feedback
 
+[Common input fields](https://learn.chatgpt.com/docs/hooks#common-input-fields) · [Common output rules](https://learn.chatgpt.com/docs/hooks#common-output-fields)
+
 <!--
 Fields shown are an excerpt, not the complete schema. JSON responses differ by event. An empty successful response normally continues, but Stop and SubagentStop require valid JSON when returning output. Plain text is context for SessionStart, SubagentStart, and UserPromptSubmit; it is ignored or invalid elsewhere. Read actual hook.py files and fixtures.json.
 Source: https://learn.chatgpt.com/docs/hooks
@@ -159,6 +161,8 @@ class: compact
 
 <p class="caption">Response or mechanism excerpt; read the complete hook alongside it.</p>
 
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#sessionstart" target="_blank" rel="noopener noreferrer">Official SessionStart I/O</a></p>
+
 <!--
 Restart after hook review. Match startup, resume, clear, compact, or fork when needed; this example matches startup and resume.
 Show 01-session-context/hook.py (server.py for lab 16) and its hook configuration. Explain where the JSON fields differ from other events.
@@ -212,6 +216,8 @@ class: compact
 ```
 
 <p class="caption">Response or mechanism excerpt; read the complete hook alongside it.</p>
+
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#pretooluse" target="_blank" rel="noopener noreferrer">Official PreToolUse I/O</a></p>
 
 <!--
 This exact-token check is not a complete shell security policy. Both deployments are local simulations.
@@ -268,6 +274,8 @@ class: compact
 
 <p class="caption">Illustrative log record; the hook response itself is {}.</p>
 
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#posttooluse" target="_blank" rel="noopener noreferrer">Official PostToolUse I/O</a></p>
+
 <!--
 A nonzero shell exit can still trigger PostToolUse. No raw prompt, command, or output is recorded by this logger.
 Show 03-tool-log/hook.py (server.py for lab 16) and its hook configuration. Explain where the JSON fields differ from other events.
@@ -320,6 +328,8 @@ class: compact
 ```
 
 <p class="caption">Response or mechanism excerpt; read the complete hook alongside it.</p>
+
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#userpromptsubmit" target="_blank" rel="noopener noreferrer">Official UserPromptSubmit I/O</a></p>
 
 <!--
 Only a synthetic marker is checked. Matcher is ignored for UserPromptSubmit. Never paste real credentials in the demo.
@@ -377,6 +387,8 @@ class: compact
 
 <p class="caption">Response or mechanism excerpt; read the complete hook alongside it.</p>
 
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#permissionrequest" target="_blank" rel="noopener noreferrer">Official PermissionRequest I/O</a></p>
+
 <!--
 Depends on approval policy and a real escalation. No approval request means no event. policy.txt can be deny, allow, or abstain; restart after changes if required by trust review. Allow is restricted to the exact local simulation command.
 Show 05-permission-request/hook.py (server.py for lab 16) and its hook configuration. Explain where the JSON fields differ from other events.
@@ -432,6 +444,8 @@ else:
 
 <p class="caption">Control-flow excerpt; the full script runs check.py.</p>
 
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#stop" target="_blank" rel="noopener noreferrer">Official Stop I/O</a></p>
+
 <!--
 stop_hook_active bounds follow-ups to one. A failed second check produces a warning and releases the demo; this is not an indefinite quality gate.
 Show 06-stop-check/hook.py (server.py for lab 16) and its hook configuration. Explain where the JSON fields differ from other events.
@@ -484,6 +498,8 @@ SessionStart source=compact Restore checkpoint as context
 
 <p class="caption">Response or mechanism excerpt; read the complete hook alongside it.</p>
 
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#precompact" target="_blank" rel="noopener noreferrer">Official PreCompact I/O</a> · <a href="https://learn.chatgpt.com/docs/hooks#postcompact" target="_blank" rel="noopener noreferrer">Official PostCompact I/O</a> · <a href="https://learn.chatgpt.com/docs/hooks#sessionstart" target="_blank" rel="noopener noreferrer">Official SessionStart I/O</a></p>
+
 <!--
 Checkpoint contents are synthetic, not an automatic transcript summary. Manual and automatic triggers are supported, but the live exercise uses manual compaction.
 Show 07-compaction/hook.py (server.py for lab 16) and its hook configuration. Explain where the JSON fields differ from other events.
@@ -535,6 +551,8 @@ SubagentStop  → decision: block   → request a verification note
 ```
 
 <p class="caption">Response or mechanism excerpt; read the complete hook alongside it.</p>
+
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#subagentstart" target="_blank" rel="noopener noreferrer">Official SubagentStart I/O</a> · <a href="https://learn.chatgpt.com/docs/hooks#subagentstop" target="_blank" rel="noopener noreferrer">Official SubagentStop I/O</a></p>
 
 <!--
 Requires subagents enabled and an actual spawned child. A conforming report needs no retry; the missing-Tests fixture demonstrates continuation deterministically. SubagentStart cannot stop a child via continue:false.
@@ -590,6 +608,8 @@ class: compact
 
 <p class="caption">Illustrative completion metadata; hook output is diagnostic only.</p>
 
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#premodelrequest-and-postmodelrequest" target="_blank" rel="noopener noreferrer">Official PreModelRequest I/O</a> · <a href="https://learn.chatgpt.com/docs/hooks#premodelrequest-and-postmodelrequest" target="_blank" rel="noopener noreferrer">Official PostModelRequest I/O</a></p>
+
 <!--
 Diagnostic only: cannot block requests or inject context. One user turn can contain several request attempts. Failed/cancelled outcomes are synthetic fixture cases, not induced provider outages.
 Show 09-model-requests/hook.py (server.py for lab 16) and its hook configuration. Explain where the JSON fields differ from other events.
@@ -641,6 +661,8 @@ class: compact
 ```
 
 <p class="caption">Response or mechanism excerpt; read the complete hook alongside it.</p>
+
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#interrupt" target="_blank" rel="noopener noreferrer">Official Interrupt I/O</a></p>
 
 <!--
 No event for idle threads or subagents. Output cannot prevent interruption or restart the turn. Stopping a turn does not guarantee rollback of tool side effects.
@@ -694,6 +716,8 @@ class: compact
 ```
 
 <p class="caption">Illustrative local marker; hook output is advisory.</p>
+
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#sessionend" target="_blank" rel="noopener noreferrer">Official SessionEnd I/O</a></p>
 
 <!--
 Main thread only. Switching chats is not immediate session end. Abrupt process termination is not a reliable trigger; output is advisory.
@@ -751,6 +775,8 @@ class: compact
 
 <p class="caption">Response or mechanism excerpt; read the complete hook alongside it.</p>
 
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#pretooluse" target="_blank" rel="noopener noreferrer">Official PreToolUse I/O</a></p>
+
 <!--
 updatedInput must accompany permissionDecision allow. Bash/apply_patch require a string command. Existing input fields are preserved.
 Show 12-input-rewrite/hook.py (server.py for lab 16) and its hook configuration. Explain where the JSON fields differ from other events.
@@ -803,6 +829,8 @@ class: compact
 ```
 
 <p class="caption">Response or mechanism excerpt; read the complete hook alongside it.</p>
+
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#posttooluse" target="_blank" rel="noopener noreferrer">Official PostToolUse I/O</a></p>
 
 <!--
 A PostToolUse block cannot undo the generated file. Code-mode promises reject for decision:block or exit 2, but continue:false has different behavior.
@@ -858,6 +886,8 @@ class: compact
 ```
 
 <p class="caption">Handler excerpt; full path is in the scenario config.</p>
+
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#posttooluse" target="_blank" rel="noopener noreferrer">Official PostToolUse I/O</a></p>
 
 <!--
 async:true cannot block, allow, rewrite, or request continuation. Delivery waits for a safe point; if idle, the next user turn. Unfinished work is cancelled at session end.
@@ -915,6 +945,8 @@ class: compact
 
 <p class="caption">Matcher-group excerpt; event input still reports apply_patch.</p>
 
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#pretooluse" target="_blank" rel="noopener noreferrer">Official PreToolUse I/O</a></p>
+
 <!--
 Narrow header check for the exact relative path only. Shell writes and alternate spellings are outside this example. apply_patch also matches Edit and Write aliases.
 Show 15-edit-guard/hook.py (server.py for lab 16) and its hook configuration. Explain where the JSON fields differ from other events.
@@ -971,6 +1003,8 @@ class: compact
 
 <p class="caption">Handler configuration; values are expanded from the hook event.</p>
 
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#pretooluse" target="_blank" rel="noopener noreferrer">Official PreToolUse I/O</a></p>
+
 <!--
 The handler does not connect servers itself. Missing servers, tool errors, and timeouts do not block. MCP handlers are synchronous and cannot handle SessionEnd.
 Show 16-mcp-handler/hook.py (server.py for lab 16) and its hook configuration. Explain where the JSON fields differ from other events.
@@ -1024,6 +1058,8 @@ timeout     Seven-second script, five-second handler timeout
 ```
 
 <p class="caption">Response or mechanism excerpt; read the complete hook alongside it.</p>
+
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#pretooluse" target="_blank" rel="noopener noreferrer">Official PreToolUse I/O</a></p>
 
 <!--
 Do not use errors as a policy mechanism. This scenario is intentionally broken in some modes. Restore mode.txt to pass with reset before leaving it.
@@ -1079,6 +1115,8 @@ class: compact
 ```
 
 <p class="caption">Handler excerpt; output is capped at 40 synthetic lines.</p>
+
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#sessionstart" target="_blank" rel="noopener noreferrer">Official SessionStart I/O</a></p>
 
 <!--
 The limit is approximate tokens, not bytes. Fixture playback verifies the text only; spilling and file references require live CLI delivery. Do not put secrets in hook output.

@@ -4,6 +4,12 @@
 
 **Use case:** Compare explicit denial with hook failures.
 
+## Official input/output contract
+
+- [PreToolUse — event inputs and allowed outputs](https://learn.chatgpt.com/docs/hooks#pretooluse)
+
+Every event also uses the [common input fields](https://learn.chatgpt.com/docs/hooks#common-input-fields). Check the [shared output fields and event-specific restrictions](https://learn.chatgpt.com/docs/hooks#common-output-fields) before returning a response. The event links above specify what each hook adds and which outputs it accepts.
+
 ## Run live
 
 From the repository root:

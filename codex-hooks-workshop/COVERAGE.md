@@ -2,22 +2,24 @@
 
 Reference: [official release-behavior guide](https://learn.chatgpt.com/docs/hooks), checked 2026-11-04. Local reference binary: **codex-cli 0.166.0**. All 14 documented event names also occur in the installed CLI generated ManagedHooksRequirements schema; see reference/support-snapshot.json. A schema match is not a live execution test.
 
-| Event | Matcher | Main supported effect | Demo(s) |
+Click an event name below for its official input fields and accepted output formats. All events share [common input fields](https://learn.chatgpt.com/docs/hooks#common-input-fields); [common output fields](https://learn.chatgpt.com/docs/hooks#common-output-fields) apply only where that event supports them.
+
+| Event (official input/output) | Matcher | Main supported effect | Demo(s) |
 | --- | --- | --- | --- |
-| `SessionStart` | source: startup / resume / clear / compact / fork | Add developer context | [01](01-session-context/README.md), [07](07-compaction/README.md), [18](18-large-context/README.md) |
-| `SessionEnd` | reason: other | Advisory bookkeeping only | [11](11-session-end/README.md) |
-| `UserPromptSubmit` | ignored | Add context or reject prompt | [04](04-prompt-filter/README.md) |
-| `PreToolUse` | tool name and aliases | Deny, add context, or rewrite supported call | [02](02-command-guard/README.md), [12](12-input-rewrite/README.md), [15](15-edit-guard/README.md), [16](16-mcp-handler/README.md), [17](17-failure-modes/README.md) |
-| `PermissionRequest` | tool name and aliases | Allow, deny, or leave approval unchanged | [05](05-permission-request/README.md) |
-| `PostToolUse` | tool name and aliases | Add context or replace feedback; cannot undo action | [03](03-tool-log/README.md), [13](13-post-tool-feedback/README.md), [14](14-background-hook/README.md) |
-| `PreCompact` | trigger: manual / auto | Observe; continue:false stops before compaction | [07](07-compaction/README.md) |
-| `PostCompact` | trigger: manual / auto | Observe; continue:false stops after compaction | [07](07-compaction/README.md) |
-| `SubagentStart` | agent_type | Add child context; continue:false does not stop start | [08](08-subagent-lifecycle/README.md) |
-| `SubagentStop` | agent_type | Continue child flow; continue:false overrides continuation | [08](08-subagent-lifecycle/README.md) |
-| `PreModelRequest` | ignored | Diagnostics only | [09](09-model-requests/README.md) |
-| `PostModelRequest` | ignored | Diagnostics only | [09](09-model-requests/README.md) |
-| `Stop` | ignored | Request another turn; continue:false overrides continuation | [06](06-stop-check/README.md) |
-| `Interrupt` | ignored | Advisory; cannot prevent interruption or restart | [10](10-interrupt/README.md) |
+| [SessionStart](https://learn.chatgpt.com/docs/hooks#sessionstart) | source: startup / resume / clear / compact / fork | Add developer context | [01](01-session-context/README.md), [07](07-compaction/README.md), [18](18-large-context/README.md) |
+| [SessionEnd](https://learn.chatgpt.com/docs/hooks#sessionend) | reason: other | Advisory bookkeeping only | [11](11-session-end/README.md) |
+| [UserPromptSubmit](https://learn.chatgpt.com/docs/hooks#userpromptsubmit) | ignored | Add context or reject prompt | [04](04-prompt-filter/README.md) |
+| [PreToolUse](https://learn.chatgpt.com/docs/hooks#pretooluse) | tool name and aliases | Deny, add context, or rewrite supported call | [02](02-command-guard/README.md), [12](12-input-rewrite/README.md), [15](15-edit-guard/README.md), [16](16-mcp-handler/README.md), [17](17-failure-modes/README.md) |
+| [PermissionRequest](https://learn.chatgpt.com/docs/hooks#permissionrequest) | tool name and aliases | Allow, deny, or leave approval unchanged | [05](05-permission-request/README.md) |
+| [PostToolUse](https://learn.chatgpt.com/docs/hooks#posttooluse) | tool name and aliases | Add context or replace feedback; cannot undo action | [03](03-tool-log/README.md), [13](13-post-tool-feedback/README.md), [14](14-background-hook/README.md) |
+| [PreCompact](https://learn.chatgpt.com/docs/hooks#precompact) | trigger: manual / auto | Observe; continue:false stops before compaction | [07](07-compaction/README.md) |
+| [PostCompact](https://learn.chatgpt.com/docs/hooks#postcompact) | trigger: manual / auto | Observe; continue:false stops after compaction | [07](07-compaction/README.md) |
+| [SubagentStart](https://learn.chatgpt.com/docs/hooks#subagentstart) | agent_type | Add child context; continue:false does not stop start | [08](08-subagent-lifecycle/README.md) |
+| [SubagentStop](https://learn.chatgpt.com/docs/hooks#subagentstop) | agent_type | Continue child flow; continue:false overrides continuation | [08](08-subagent-lifecycle/README.md) |
+| [PreModelRequest](https://learn.chatgpt.com/docs/hooks#premodelrequest-and-postmodelrequest) | ignored | Diagnostics only | [09](09-model-requests/README.md) |
+| [PostModelRequest](https://learn.chatgpt.com/docs/hooks#premodelrequest-and-postmodelrequest) | ignored | Diagnostics only | [09](09-model-requests/README.md) |
+| [Stop](https://learn.chatgpt.com/docs/hooks#stop) | ignored | Request another turn; continue:false overrides continuation | [06](06-stop-check/README.md) |
+| [Interrupt](https://learn.chatgpt.com/docs/hooks#interrupt) | ignored | Advisory; cannot prevent interruption or restart | [10](10-interrupt/README.md) |
 
 ## Handler coverage
 
