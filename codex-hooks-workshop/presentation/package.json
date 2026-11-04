@@ -1,0 +1,22 @@
+{
+  "name": "codex-hooks-workshop-slides",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "slidev slides.md",
+    "build": "slidev build slides.md",
+    "export": "slidev export slides.md"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@slidev/cli": "^53.0.0",
+    "@slidev/theme-default": "^0.25.0",
+    "playwright-chromium": "^1.56.0"
+  },
+  "overrides": {
+    "dompurify": "3.4.17",
+    "image-size": "2.0.4"
+  }
+}

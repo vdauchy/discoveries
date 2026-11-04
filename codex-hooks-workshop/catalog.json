@@ -1,0 +1,222 @@
+[
+  {
+    "id": "01",
+    "directory": "01-session-context",
+    "title": "Startup context",
+    "events": [
+      "SessionStart"
+    ],
+    "use_case": "Supply runtime environment information.",
+    "action": "Ask: Which deployment environment is selected? Answer without using tools.",
+    "evidence": "Codex answers staging from hook context.",
+    "caveat": "Restart after hook review. Match startup, resume, clear, compact, or fork when needed; this example matches startup and resume."
+  },
+  {
+    "id": "02",
+    "directory": "02-command-guard",
+    "title": "Command denial",
+    "events": [
+      "PreToolUse"
+    ],
+    "use_case": "Check a specific shell command before execution.",
+    "action": "Ask: Run exactly `python3 deploy.py --env production` once. If blocked, report the denial and do not retry. Then ask for `python3 deploy.py --env staging`.",
+    "evidence": "Production is denied; only the staging marker exists.",
+    "caveat": "This exact-token check is not a complete shell security policy. Both deployments are local simulations."
+  },
+  {
+    "id": "03",
+    "directory": "03-tool-log",
+    "title": "Tool logging",
+    "events": [
+      "PostToolUse"
+    ],
+    "use_case": "Record metadata after supported tool completion.",
+    "action": "Ask: Run exactly `python3 hello.py` once. Inspect events.jsonl from a separate terminal.",
+    "evidence": "A new JSONL entry records the completed shell call.",
+    "caveat": "A nonzero shell exit can still trigger PostToolUse. No raw prompt, command, or output is recorded by this logger."
+  },
+  {
+    "id": "04",
+    "directory": "04-prompt-filter",
+    "title": "Prompt filtering",
+    "events": [
+      "UserPromptSubmit"
+    ],
+    "use_case": "Reject a synthetic sensitive marker and add task context.",
+    "action": "Submit: Explain DEMO_SECRET_123. Observe rejection. Then submit: Explain how you would investigate a failing test.",
+    "evidence": "First prompt is blocked; the second receives brief explanation guidance.",
+    "caveat": "Only a synthetic marker is checked. Matcher is ignored for UserPromptSubmit. Never paste real credentials in the demo."
+  },
+  {
+    "id": "05",
+    "directory": "05-permission-request",
+    "title": "Permission decisions",
+    "events": [
+      "PermissionRequest"
+    ],
+    "use_case": "Decide only when Codex is about to request approval.",
+    "action": "Launch this scenario in read-only sandbox mode (the launcher does this). Ask: Execute exactly `python3 write_marker.py`; if the sandbox rejects the write, request approval to rerun it with elevated permissions. Do not use another mechanism.",
+    "evidence": "PermissionRequest denies the escalation and .demo/write-marker.txt remains absent.",
+    "caveat": "Depends on approval policy and a real escalation. No approval request means no event. policy.txt can be deny, allow, or abstain; restart after changes if required by trust review. Allow is restricted to the exact local simulation command."
+  },
+  {
+    "id": "06",
+    "directory": "06-stop-check",
+    "title": "Completion check",
+    "events": [
+      "Stop"
+    ],
+    "use_case": "Run a check when the main turn tries to finish.",
+    "action": "Reset first. Ask: Reply Ready. Let the Stop hook request its follow-up check.",
+    "evidence": "The hook detects answer.txt = 41, requests a continuation, and Codex changes it to 42 and runs check.py.",
+    "caveat": "stop_hook_active bounds follow-ups to one. A failed second check produces a warning and releases the demo; this is not an indefinite quality gate."
+  },
+  {
+    "id": "07",
+    "directory": "07-compaction",
+    "title": "Compaction checkpoint",
+    "events": [
+      "PreCompact",
+      "PostCompact",
+      "SessionStart"
+    ],
+    "use_case": "Save a small explicit task checkpoint and restore it after compaction.",
+    "action": "Have a short conversation about a synthetic failing test, then run `/compact`. Inspect .demo/events.jsonl and checkpoint.json.",
+    "evidence": "PreCompact saves a checkpoint; PostCompact reports completion; SessionStart source compact supplies the saved task context.",
+    "caveat": "Checkpoint contents are synthetic, not an automatic transcript summary. Manual and automatic triggers are supported, but the live exercise uses manual compaction."
+  },
+  {
+    "id": "08",
+    "directory": "08-subagent-lifecycle",
+    "title": "Subagent lifecycle",
+    "events": [
+      "SubagentStart",
+      "SubagentStop"
+    ],
+    "use_case": "Give reviewers instructions and request a missing verification note.",
+    "action": "Ask: Spawn one read-only subagent to inspect this scenario README and report a short summary. Have it state what tests it ran or did not run. Wait for it to finish.",
+    "evidence": "Journal contains SubagentStart and SubagentStop with the child identifier; report includes Tests:.",
+    "caveat": "Requires subagents enabled and an actual spawned child. A conforming report needs no retry; the missing-Tests fixture demonstrates continuation deterministically. SubagentStart cannot stop a child via continue:false."
+  },
+  {
+    "id": "09",
+    "directory": "09-model-requests",
+    "title": "Model request telemetry",
+    "events": [
+      "PreModelRequest",
+      "PostModelRequest"
+    ],
+    "use_case": "Observe each model request attempt, including retries.",
+    "action": "Ask: Reply with one sentence describing a hook. Inspect .demo/events.jsonl and outcomes.jsonl.",
+    "evidence": "PreModelRequest and PostModelRequest record the model and outcome; token usage can be null.",
+    "caveat": "Diagnostic only: cannot block requests or inject context. One user turn can contain several request attempts. Failed/cancelled outcomes are synthetic fixture cases, not induced provider outages."
+  },
+  {
+    "id": "10",
+    "directory": "10-interrupt",
+    "title": "Interruption",
+    "events": [
+      "Interrupt"
+    ],
+    "use_case": "Record an interrupted active main-thread turn.",
+    "action": "Ask: Run `python3 slow.py` and wait for it to finish. Press Esc while the turn is active. Inspect .demo/interrupted.json.",
+    "evidence": "A local record contains the interrupted turn ID.",
+    "caveat": "No event for idle threads or subagents. Output cannot prevent interruption or restart the turn. Stopping a turn does not guarantee rollback of tool side effects."
+  },
+  {
+    "id": "11",
+    "directory": "11-session-end",
+    "title": "Session end",
+    "events": [
+      "SessionEnd"
+    ],
+    "use_case": "Record normal closure for local bookkeeping.",
+    "action": "Send a brief prompt, wait for the reply, then exit Codex normally using `/quit`. Inspect .demo/session-ended.json from another terminal.",
+    "evidence": "The session-end marker records reason other.",
+    "caveat": "Main thread only. Switching chats is not immediate session end. Abrupt process termination is not a reliable trigger; output is advisory."
+  },
+  {
+    "id": "12",
+    "directory": "12-input-rewrite",
+    "title": "Tool input rewriting",
+    "events": [
+      "PreToolUse"
+    ],
+    "use_case": "Add a default option to a known demo command.",
+    "action": "Ask: Run exactly `python3 greet.py` once.",
+    "evidence": "Codex runs the replacement command and prints Hello, workshop! rather than Hello, default!.",
+    "caveat": "updatedInput must accompany permissionDecision allow. Bash/apply_patch require a string command. Existing input fields are preserved."
+  },
+  {
+    "id": "13",
+    "directory": "13-post-tool-feedback",
+    "title": "Post-tool feedback",
+    "events": [
+      "PostToolUse"
+    ],
+    "use_case": "Replace feedback after a generator already ran.",
+    "action": "Ask: Run exactly `python3 generate.py` once, then report the outcome without rerunning it.",
+    "evidence": "The generated file exists and Codex receives review feedback instead of the original result.",
+    "caveat": "A PostToolUse block cannot undo the generated file. Code-mode promises reject for decision:block or exit 2, but continue:false has different behavior."
+  },
+  {
+    "id": "14",
+    "directory": "14-background-hook",
+    "title": "Background execution",
+    "events": [
+      "PostToolUse"
+    ],
+    "use_case": "Move informational work off the synchronous path.",
+    "action": "Ask: Run exactly `python3 hello.py` and briefly explain the result. Keep the session open; inspect .demo/background-finished.txt after a second.",
+    "evidence": "Foreground completes while a delayed hook records completion.",
+    "caveat": "async:true cannot block, allow, rewrite, or request continuation. Delivery waits for a safe point; if idle, the next user turn. Unfinished work is cancelled at session end."
+  },
+  {
+    "id": "15",
+    "directory": "15-edit-guard",
+    "title": "File-edit guard",
+    "events": [
+      "PreToolUse"
+    ],
+    "use_case": "Inspect an apply_patch call rather than shell execution.",
+    "action": "Ask: Use apply_patch to change protected.txt to Changed. If blocked, report the denial and do not try another tool. Then ask apply_patch to add notes.txt.",
+    "evidence": "The protected patch is denied; an unrelated patch is allowed.",
+    "caveat": "Narrow header check for the exact relative path only. Shell writes and alternate spellings are outside this example. apply_patch also matches Edit and Write aliases."
+  },
+  {
+    "id": "16",
+    "directory": "16-mcp-handler",
+    "title": "MCP tool handler",
+    "events": [
+      "PreToolUse"
+    ],
+    "use_case": "Route a policy check through an existing local MCP connection.",
+    "action": "Check `/mcp` shows workshop_checker connected, then ask for the exact simulated production deployment command from scenario 02.",
+    "evidence": "Local check_command returns a denial; .demo/events.jsonl records the decision.",
+    "caveat": "The handler does not connect servers itself. Missing servers, tool errors, and timeouts do not block. MCP handlers are synchronous and cannot handle SessionEnd."
+  },
+  {
+    "id": "17",
+    "directory": "17-failure-modes",
+    "title": "Failure modes",
+    "events": [
+      "PreToolUse"
+    ],
+    "use_case": "Compare explicit denial with hook failures.",
+    "action": "Keep mode.txt as pass initially. Ask for `python3 hello.py`. Then set mode.txt to deny-exit, error, invalid-json, unsupported, or timeout, review changes if prompted, and repeat the command.",
+    "evidence": "Exit 2 is a policy denial; other modes show a failing hook or unsupported-field report. Fixtures show each response separately.",
+    "caveat": "Do not use errors as a policy mechanism. This scenario is intentionally broken in some modes. Restore mode.txt to pass with reset before leaving it."
+  },
+  {
+    "id": "18",
+    "directory": "18-large-context",
+    "title": "Large context output",
+    "events": [
+      "SessionStart"
+    ],
+    "use_case": "Demonstrate the context-output spill threshold with bounded synthetic text.",
+    "action": "Launch a new session and ask: Read the startup reference preview and state its topic briefly without tools.",
+    "evidence": "The hook returns 40 bounded synthetic reference lines; with additionalContextLimit 64, Codex should provide a shortened preview and saved-file reference.",
+    "caveat": "The limit is approximate tokens, not bytes. Fixture playback verifies the text only; spilling and file references require live CLI delivery. Do not put secrets in hook output."
+  }
+]

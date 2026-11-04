@@ -1,0 +1,121 @@
+[
+  {
+    "name": "pass",
+    "input": {
+      "hook_event_name": "PreToolUse",
+      "session_id": "fixture-session",
+      "turn_id": "fixture-turn",
+      "cwd": "/synthetic/workshop",
+      "transcript_path": null,
+      "model": "fixture-model",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": "python3 hello.py"
+      }
+    },
+    "expected": {}
+  },
+  {
+    "name": "exit-two",
+    "input": {
+      "hook_event_name": "PreToolUse",
+      "session_id": "fixture-session",
+      "turn_id": "fixture-turn",
+      "cwd": "/synthetic/workshop",
+      "transcript_path": null,
+      "model": "fixture-model",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": "python3 hello.py"
+      }
+    },
+    "expected": {},
+    "exit": 2,
+    "stderr_contains": "Deliberate demo denial",
+    "prepare": {
+      "mode.txt": "deny-exit\n"
+    }
+  },
+  {
+    "name": "error",
+    "input": {
+      "hook_event_name": "PreToolUse",
+      "session_id": "fixture-session",
+      "turn_id": "fixture-turn",
+      "cwd": "/synthetic/workshop",
+      "transcript_path": null,
+      "model": "fixture-model",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": "python3 hello.py"
+      }
+    },
+    "expected": {},
+    "exit": 1,
+    "stderr_contains": "Deliberate demo failure",
+    "prepare": {
+      "mode.txt": "error\n"
+    }
+  },
+  {
+    "name": "bad-json",
+    "input": {
+      "hook_event_name": "PreToolUse",
+      "session_id": "fixture-session",
+      "turn_id": "fixture-turn",
+      "cwd": "/synthetic/workshop",
+      "transcript_path": null,
+      "model": "fixture-model",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": "python3 hello.py"
+      }
+    },
+    "expected": {},
+    "invalid_json": true,
+    "prepare": {
+      "mode.txt": "invalid-json\n"
+    }
+  },
+  {
+    "name": "unsupported-field",
+    "input": {
+      "hook_event_name": "PreToolUse",
+      "session_id": "fixture-session",
+      "turn_id": "fixture-turn",
+      "cwd": "/synthetic/workshop",
+      "transcript_path": null,
+      "model": "fixture-model",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": "python3 hello.py"
+      }
+    },
+    "expected": {
+      "continue": false
+    },
+    "prepare": {
+      "mode.txt": "unsupported\n"
+    }
+  },
+  {
+    "name": "timeout",
+    "input": {
+      "hook_event_name": "PreToolUse",
+      "session_id": "fixture-session",
+      "turn_id": "fixture-turn",
+      "cwd": "/synthetic/workshop",
+      "transcript_path": null,
+      "model": "fixture-model",
+      "tool_name": "Bash",
+      "tool_input": {
+        "command": "python3 hello.py"
+      }
+    },
+    "expected": {},
+    "timeout": true,
+    "prepare": {
+      "mode.txt": "timeout\n"
+    }
+  }
+]

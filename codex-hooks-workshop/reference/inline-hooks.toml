@@ -1,0 +1,8 @@
+# Inactive example: use instead of JSON at a config layer, not alongside it.
+[[hooks.PreToolUse]]
+matcher = "^Bash$"
+
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = 'python3 "$(git rev-parse --show-toplevel)/codex-hooks-workshop/02-command-guard/hook.py"'
+timeout = 5

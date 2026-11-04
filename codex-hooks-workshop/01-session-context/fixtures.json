@@ -1,0 +1,20 @@
+[
+  {
+    "name": "startup",
+    "input": {
+      "hook_event_name": "SessionStart",
+      "session_id": "fixture-session",
+      "turn_id": "fixture-turn",
+      "cwd": "/synthetic/workshop",
+      "transcript_path": null,
+      "model": "fixture-model",
+      "source": "startup"
+    },
+    "expected": {
+      "hookSpecificOutput": {
+        "hookEventName": "SessionStart",
+        "additionalContext": "The selected workshop deployment environment is staging."
+      }
+    }
+  }
+]

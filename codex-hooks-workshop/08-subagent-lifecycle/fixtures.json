@@ -1,0 +1,73 @@
+[
+  {
+    "name": "start",
+    "input": {
+      "hook_event_name": "SubagentStart",
+      "session_id": "fixture-session",
+      "turn_id": "fixture-turn",
+      "cwd": "/synthetic/workshop",
+      "transcript_path": null,
+      "model": "fixture-model",
+      "agent_id": "fixture-agent",
+      "agent_type": "explorer"
+    },
+    "expected": {
+      "hookSpecificOutput": {
+        "hookEventName": "SubagentStart",
+        "additionalContext": "Workshop reviewer: end your report with Tests: and what you verified or did not run."
+      }
+    }
+  },
+  {
+    "name": "request-followup",
+    "input": {
+      "hook_event_name": "SubagentStop",
+      "session_id": "fixture-session",
+      "turn_id": "fixture-turn",
+      "cwd": "/synthetic/workshop",
+      "transcript_path": null,
+      "model": "fixture-model",
+      "agent_id": "fixture-agent",
+      "agent_type": "explorer",
+      "stop_hook_active": false,
+      "last_assistant_message": "READY"
+    },
+    "expected": {
+      "decision": "block"
+    }
+  },
+  {
+    "name": "complete",
+    "input": {
+      "hook_event_name": "SubagentStop",
+      "session_id": "fixture-session",
+      "turn_id": "fixture-turn",
+      "cwd": "/synthetic/workshop",
+      "transcript_path": null,
+      "model": "fixture-model",
+      "agent_id": "fixture-agent",
+      "agent_type": "explorer",
+      "stop_hook_active": false,
+      "last_assistant_message": "Tests: not run (read-only review)."
+    },
+    "expected": {}
+  },
+  {
+    "name": "bounded-retry",
+    "input": {
+      "hook_event_name": "SubagentStop",
+      "session_id": "fixture-session",
+      "turn_id": "fixture-turn",
+      "cwd": "/synthetic/workshop",
+      "transcript_path": null,
+      "model": "fixture-model",
+      "agent_id": "fixture-agent",
+      "agent_type": "explorer",
+      "stop_hook_active": true,
+      "last_assistant_message": null
+    },
+    "expected": {
+      "systemMessage": "Reviewer still omitted Tests; demo retry limit reached."
+    }
+  }
+]

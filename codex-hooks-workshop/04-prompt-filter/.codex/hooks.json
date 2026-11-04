@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/codex-hooks-workshop/04-prompt-filter/hook.py\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

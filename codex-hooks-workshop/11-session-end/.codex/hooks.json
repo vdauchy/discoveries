@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/codex-hooks-workshop/11-session-end/hook.py\"",
+            "timeout": 3
+          }
+        ],
+        "matcher": "^other$"
+      }
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "checked": "2026-11-04",
+  "cli": "codex-cli 0.166.0",
+  "source": "codex app-server generate-json-schema (local installed binary)",
+  "definition": "ManagedHooksRequirements",
+  "event_names": [
+    "Interrupt",
+    "PermissionRequest",
+    "PostCompact",
+    "PostModelRequest",
+    "PostToolUse",
+    "PreCompact",
+    "PreModelRequest",
+    "PreToolUse",
+    "SessionEnd",
+    "SessionStart",
+    "Stop",
+    "SubagentStart",
+    "SubagentStop",
+    "UserPromptSubmit"
+  ],
+  "runtime_rehearsal": "Not performed; schemas and synthetic fixtures are not runtime execution evidence."
+}

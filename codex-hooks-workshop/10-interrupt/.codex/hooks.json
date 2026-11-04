@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Interrupt": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/codex-hooks-workshop/10-interrupt/hook.py\"",
+            "timeout": 3
+          }
+        ]
+      }
+    ]
+  }
+}

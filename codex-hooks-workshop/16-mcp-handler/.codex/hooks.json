@@ -1,0 +1,21 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^Bash$",
+        "hooks": [
+          {
+            "type": "mcp_tool",
+            "server": "workshop_checker",
+            "tool": "check_command",
+            "input": {
+              "command": "${tool_input.command}"
+            },
+            "timeout": 5,
+            "statusMessage": "Checking local MCP demo policy"
+          }
+        ]
+      }
+    ]
+  }
+}

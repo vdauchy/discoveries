@@ -1,0 +1,5 @@
+**/events.jsonl
+**/deployment-*.txt
+**/__pycache__/
+**/.demo/
+15-edit-guard/notes.txt

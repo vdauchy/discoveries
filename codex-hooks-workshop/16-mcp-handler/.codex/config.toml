@@ -1,0 +1,4 @@
+[mcp_servers.workshop_checker]
+command = "sh"
+args = ["-c", 'exec python3 "$(git rev-parse --show-toplevel)/codex-hooks-workshop/16-mcp-handler/server.py"']
+startup_timeout_sec = 10

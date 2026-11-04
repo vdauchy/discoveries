@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/codex-hooks-workshop/14-background-hook/hook.py\"",
+            "timeout": 5,
+            "async": true
+          }
+        ],
+        "matcher": "^Bash$"
+      }
+    ]
+  }
+}

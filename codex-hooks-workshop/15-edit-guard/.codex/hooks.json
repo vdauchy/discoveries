@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/codex-hooks-workshop/15-edit-guard/hook.py\"",
+            "timeout": 5
+          }
+        ],
+        "matcher": "^apply_patch$"
+      }
+    ]
+  }
+}

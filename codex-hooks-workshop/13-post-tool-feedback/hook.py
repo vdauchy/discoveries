@@ -1,0 +1,30 @@
+"""13-post-tool-feedback — educational hook; see README for runtime limitations."""
+import json
+from pathlib import Path
+import sys
+from datetime import datetime, timezone
+
+payload = json.load(sys.stdin)
+folder = Path(__file__).resolve().parent
+state = folder / ".demo"
+state.mkdir(exist_ok=True)
+record = {"event": payload["hook_event_name"], "session_id": payload["session_id"],
+          "timestamp": datetime.now(timezone.utc).isoformat()}
+for key in ("source", "trigger", "reason", "turn_id", "agent_id", "agent_type", "model", "status"):
+    if key in payload:
+        record[key] = payload[key]
+with (state / "events.jsonl").open("a") as log:
+    log.write(json.dumps(record) + "\n")
+
+import shlex
+try:
+    tokens = shlex.split(payload["tool_input"].get("command", ""))
+except ValueError:
+    tokens = []
+if tokens == ["python3", "generate.py"]:
+    print(json.dumps({"decision": "block", "reason":
+        "Generator already ran. Report that generated.txt needs human review; do not rerun the generator.",
+        "hookSpecificOutput": {"hookEventName": "PostToolUse",
+            "additionalContext": "PostToolUse changes feedback, not the existing generated file."}}))
+else:
+    print("{}")
