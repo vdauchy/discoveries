@@ -28,3 +28,9 @@ The full deck builds and exports; the rendered slides were visually reviewed. Th
 - Both slide decks build. The updated launcher-introduction slide was exported and visually reviewed.
 
 Launcher tests use a fake Codex executable to verify arguments. These checks do not add live Codex hook-delivery evidence.
+
+## Lifecycle and payload clarification — 2026-11-05
+
+The 35-slide main deck distinguishes rounded hook callback points from rectangular internal harness operations. Both decks introduce shared input fields, nullable/conditional metadata, and optional output rules before the event-specific examples. Event slides list selected additional input fields and supported outputs with direct official contract links. Launcher commands and scenario prompts remain visible.
+
+Both decks build; the main export was visually reviewed. These presentation edits do not add live Codex runtime verification.

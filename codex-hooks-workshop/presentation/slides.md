@@ -32,7 +32,13 @@ class: compact
 
 # Event, matcher, and handler
 
-<div class="flow">Event → <b>Matcher</b> → Handler → <b>Response</b></div>
+```mermaid
+flowchart LR
+  E["Event"] --> M{"Matcher selects it?"}
+  M -->|Yes| H["Run handler"]
+  M -->|No| S["Skip handler"]
+  H --> R["Apply supported response"]
+```
 
 - **Event:** selects the lifecycle point
 - **Matcher:** filters one event field
@@ -47,46 +53,83 @@ A hook is a runtime callback. The matcher does not replace script logic; it only
 class: compact
 ---
 
-# The event lifecycle
+# Hook timing versus harness execution
 
-<div class="flow"><b>SessionStart</b> → UserPromptSubmit → Model request</div>
+<p class="caption"><strong>HOOK</strong> rounded nodes = callback points · <strong>HARNESS</strong> rectangles = internal work</p>
 
-<div class="flow"><b>PreToolUse</b> → Approval if needed → Tool → <b>PostToolUse</b></div>
+```mermaid { scale: 0.70 }
+flowchart LR
+  S["HARNESS: open session"] --> SS(["HOOK: SessionStart"])
+  SS --> U["HARNESS: receive prompt"] --> UP(["HOOK: UserPromptSubmit"])
+  PM(["HOOK: PreModelRequest"]) --> M["HARNESS: call model"] --> OM(["HOOK: PostModelRequest"])
+  PT(["HOOK: PreToolUse"]) --> T["HARNESS: execute tool"] --> OT(["HOOK: PostToolUse"])
+  R["HARNESS: ready to finish"] --> ST(["HOOK: Stop"])
+  ST -->|If completion allowed| F["HARNESS: finish turn"]
+  classDef hook fill:#164e43,stroke:#6ee7c0,color:#e8edf5,stroke-width:2px
+  classDef harness fill:#223144,stroke:#94a3b8,color:#e8edf5
+  class SS,UP,PM,OM,PT,OT,ST hook
+  class S,U,M,T,R,F harness
+```
 
-<div class="flow">More work → <b>Stop</b> → Next user turn</div>
+<p class="caption">HOOK points invoke enabled, matching, trusted handlers. Read rows top to bottom; model/tool rows can repeat.</p>
 
-Compaction, subagent activity, and interruptions add their own events.
-
-**SessionEnd** happens when the main session actually ends.
 
 <!--
-Explain how this behavior changes the agent lifecycle. Source: https://learn.chatgpt.com/docs/hooks
+The rectangles are internal harness work, not hook names. Rounded nodes show named events where callbacks can be dispatched. The diagram is a simplified normal path: configured synchronous handlers finish before the harness moves on; async handlers do not hold the operation. A hook may change or stop the flow where its contract permits, and there may be no matching handler. UserPromptSubmit is before sending the prompt onward. PreModelRequest and PostModelRequest bracket each request attempt. PreToolUse and PostToolUse bracket supported tool execution. PermissionRequest is conditional and occurs before surfacing a required approval request. Stop is before a main turn completes; SessionEnd is separate from a turn. Compaction, child agents, and interruptions have additional events explained later. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
 ---
 class: compact
 ---
 
-# The JSON contract
+# Common input fields
+
+Every command hook receives **one JSON object on stdin**.
 
 ```json
 {
+  "session_id": "session-123",
   "hook_event_name": "PreToolUse",
-  "session_id": "example-session",
   "cwd": "/project",
-  "tool_name": "Bash",
-  "tool_input": { "command": "python3 hello.py" }
+  "model": "active-model",
+  "transcript_path": null
 }
 ```
 
-**stdin:** one event object · **stdout:** event-specific response
+**Shared fields above** + **event-specific fields on the next slides**.
 
-**stderr:** diagnostics · **exit 2:** event-specific denial or feedback
+<p class="caption">transcript_path can be null. turn_id and permission_mode occur only on some events.</p>
 
-[Common input fields](https://learn.chatgpt.com/docs/hooks#common-input-fields) · [Common output rules](https://learn.chatgpt.com/docs/hooks#common-output-fields)
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#common-input-fields" target="_blank" rel="noopener noreferrer">Official shared input fields</a></p>
 
 <!--
-Illustrative input excerpt. Shared fields also include model and transcript_path; transcript format is not a stable API. tool_input is event-specific, not present on every event. Plain stdout is context for SessionStart, SubagentStart, and UserPromptSubmit; other events ignore or reject it. Source: https://learn.chatgpt.com/docs/hooks#common-input-fields
+The object is the common input envelope; an actual tool event also adds tool-specific fields. model is a Codex extension. transcript_path may be null and its file format is not stable. turn_id is listed in turn-scoped event tables, and permission_mode is present on the supported subset, not every event. Event slides show selected extra fields; use their official links for complete types and requirements. Source: https://learn.chatgpt.com/docs/hooks#common-input-fields
+-->
+
+---
+class: compact
+---
+
+# Common output fields
+
+**There is no output object or field required on every hook.**
+
+| Shared response field | Meaning, where supported |
+| --- | --- |
+| `systemMessage` | Warning in the UI / event stream |
+| `continue` | Event-specific flow control |
+| `stopReason` | Reason accompanying that flow control |
+
+**Exit 0 with no output:** success; normal flow continues.
+
+**Event-specific outputs** such as `permissionDecision`, `decision`, and `additionalContext` are shown with each event.
+
+<p class="caption">These shared keys are not supported by every event. suppressOutput is parsed but not implemented.</p>
+
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#common-output-fields" target="_blank" rel="noopener noreferrer">Official shared outputs and event restrictions</a></p>
+
+<!--
+Do not present common output fields as mandatory or universally supported. SessionStart, PreCompact, PostCompact, UserPromptSubmit, SubagentStop, and Stop support the documented common shape. SubagentStart supports systemMessage and hook context, but continue:false does not prevent starting. PreToolUse and PermissionRequest do not support continue/stopReason. PostToolUse has its own continue:false behavior. Model-request outputs are diagnostic only; SessionEnd is advisory. Plain stdout text is developer context on SessionStart, SubagentStart, and UserPromptSubmit; it is ignored or invalid on other events. Source: https://learn.chatgpt.com/docs/hooks#common-output-fields
 -->
 
 ---
@@ -182,19 +225,27 @@ Use ^startup$ for a fresh-session source and ^manual$ for manual compaction. Mat
 class: compact
 ---
 
-# Tool names and aliases
+# Tool names and matching aliases
 
-| Tool path | Matcher |
-| --- | --- |
-| Shell / exec_command | `Bash` |
-| File patch | `apply_patch`, `Edit`, `Write` |
-| MCP tool | Its canonical MCP tool name |
-| Other local function | Its tool name; Agent also matches spawn_agent |
+```mermaid { scale: 0.65 }
+flowchart LR
+  X["exec_command"] --> B["tool_name: Bash"] --> BM["Matcher: ^Bash$"]
+  P["apply_patch"] --> A["tool_name: apply_patch"]
+  A --> AM["Matcher: ^apply_patch$"]
+  A --> E["Alias: ^Edit$"]
+  A --> W["Alias: ^Write$"]
+```
 
-Hosted tools such as WebSearch are outside this path.
+**An alias is another matching name for the same tool.**
+
+`Edit` and `Write` select the same `apply_patch` call; the input still reports `apply_patch`.
+
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#tool-coverage" target="_blank" rel="noopener noreferrer">Official tool names and aliases</a></p>
 
 <!--
-Shell and exec_command match Bash. apply_patch also matches Edit/Write, but event input still reports apply_patch. MCP tools match their canonical names; spawn_agent also matches Agent. write_stdin does not rerun PreToolUse on an existing exec session. Hosted tools and some specialized paths do not use this hook path. Source: https://learn.chatgpt.com/docs/hooks#tool-coverage
+Distinguish the execution API name from the hook-facing tool name: exec_command is reported as Bash. Then explain aliases through one concrete operation: the same apply_patch call can be selected using apply_patch, Edit, or Write; the event payload is not renamed. Edit and Write are aliases here, not a way to distinguish editing from creating files. Inspect the patch content inside the handler for that distinction. For MCP tools, use the canonical MCP tool name; other local tools normally use their function name, with Agent also matching spawn_agent. Hosted tools such as WebSearch do not use this local hook path.
+Source: https://learn.chatgpt.com/docs/hooks#matcher-patterns
+Source: https://learn.chatgpt.com/docs/hooks#tool-coverage
 -->
 
 ---
@@ -208,11 +259,14 @@ cd codex-hooks-workshop
 ./demo.sh 02
 ```
 
-1. Finds scenario **02** by reading each directory’s `manifest.json`.
-2. Starts Codex CLI with **02-command-guard/** as its working directory.
-3. Codex loads that scenario’s trusted hook configuration and runs matching hooks.
+```mermaid
+flowchart LR
+  M["Read manifests"] --> I["Select ID 02"]
+  I --> C["Start Codex"]
+  C --> H["Load trusted hooks"]
+```
 
-**Then enter the prompt shown on the event slide.**
+Codex starts in **02-command-guard/**. Then enter the event slide’s prompt.
 
 <p class="caption">Review project and hook trust when prompted. The launcher starts Codex; Codex triggers the hooks.</p>
 
@@ -230,9 +284,9 @@ class: compact
 
 **When:** When a session starts, resumes, clears, compacts, or forks.
 
-**Input:** source; shared session fields.
+**Extra input (selected):** source; permission_mode.
 
-**Effect:** Add developer context to the model.
+**Output:** additionalContext adds developer context.
 
 ```json
 {"hookSpecificOutput": {
@@ -258,9 +312,9 @@ class: compact
 
 **When:** Before a supported local tool executes.
 
-**Input:** tool_name, tool_input, tool_use_id, turn_id.
+**Extra input (selected):** tool_name, tool_input, tool_use_id.
 
-**Effect:** Deny, add context, or rewrite tool input.
+**Output:** permissionDecision: deny; optionally context or rewritten input.
 
 ```json
 {"hookSpecificOutput": {
@@ -287,9 +341,9 @@ class: compact
 
 **When:** After supported tool output, including a failed shell command.
 
-**Input:** tool_name, tool_input, tool_response, tool_use_id.
+**Extra input (selected):** tool_name, tool_input, tool_response, tool_use_id.
 
-**Effect:** Add context or replace feedback; cannot undo the action.
+**Output:** additionalContext or decision/reason; the action already ran.
 
 ```json
 {"hookSpecificOutput": {
@@ -317,9 +371,9 @@ class: compact
 
 **When:** Before a user prompt is sent.
 
-**Input:** prompt and turn_id, plus common fields.
+**Extra input (selected):** prompt; turn_id and permission_mode.
 
-**Effect:** Add context or reject the submitted prompt.
+**Output:** decision/reason rejects; additionalContext adds context.
 
 ```json
 {
@@ -345,9 +399,9 @@ class: compact
 
 **When:** Only when Codex is about to request approval.
 
-**Input:** tool_name and tool_input; description may be present.
+**Extra input (selected):** tool_name, tool_input; description may be present.
 
-**Effect:** Allow, deny, or abstain to keep normal approval handling.
+**Output:** decision.behavior: allow / deny; {} keeps normal approval.
 
 ```json
 {"hookSpecificOutput": {
@@ -376,9 +430,9 @@ class: compact
 
 **When:** When the main turn is about to finish.
 
-**Input:** last_assistant_message, stop_hook_active, turn_id.
+**Extra input (selected):** last_assistant_message, stop_hook_active.
 
-**Effect:** Request another turn or allow completion.
+**Output:** decision/reason requests continuation; {} allows completion.
 
 ```python
 if checks_passed:
@@ -406,9 +460,9 @@ class: compact
 
 **When:** PreCompact before compaction; PostCompact after it.
 
-**Input:** trigger: manual or auto; turn_id.
+**Extra input (selected):** trigger: manual / auto; turn_id.
 
-**Effect:** Observe or stop compaction; use SessionStart to restore context.
+**Output:** systemMessage; continue:false stops before / after compaction.
 
 ```text
 PreCompact                  Save task checkpoint
@@ -433,9 +487,9 @@ class: compact
 
 **When:** When a child agent starts or is about to finish.
 
-**Input:** agent_id, agent_type; stop adds last_assistant_message.
+**Extra input (selected):** agent_id, agent_type; stop adds last_assistant_message, stop_hook_active.
 
-**Effect:** Add child context at start; request a follow-up at stop.
+**Output:** Start: additionalContext. Stop: decision/reason for follow-up.
 
 ```text
 SubagentStart → additionalContext → reviewer instructions
@@ -460,13 +514,12 @@ class: compact
 
 **When:** Before and after each model request attempt, including retries.
 
-**Input:** model, turn_id; post adds status, error, token_usage.
+**Extra input (selected):** turn_id; optional agent identifiers. Post adds status, error, token_usage.
 
-**Effect:** Diagnostics only; cannot block or add model context.
+**Output:** Diagnostics only; cannot block or add model context.
 
 ```json
 {
-  "hook_event_name": "PostModelRequest",
   "status": "completed",
   "error": null,
   "token_usage": null
@@ -492,9 +545,9 @@ class: compact
 
 **When:** An active main-thread turn is interrupted.
 
-**Input:** turn_id, permission_mode, shared session fields.
+**Extra input (selected):** turn_id and permission_mode.
 
-**Effect:** Advisory bookkeeping; cannot restart or prevent interruption.
+**Output:** Optional systemMessage; cannot prevent interruption or restart.
 
 ```json
 {
@@ -519,13 +572,12 @@ class: compact
 
 **When:** The main session actually ends.
 
-**Input:** reason: currently other; shared session fields.
+**Extra input (selected):** reason: currently other.
 
-**Effect:** Advisory bookkeeping; cannot keep the session open.
+**Output:** Advisory bookkeeping only; no model steering.
 
 ```json
 {
-  "hook_event_name": "SessionEnd",
   "reason": "other"
 }
 ```
@@ -549,9 +601,9 @@ class: compact
 
 **When:** Before a supported call executes.
 
-**Input:** Original tool_input object.
+**Extra input (selected):** tool_input: original arguments.
 
-**Effect:** Return updatedInput with permissionDecision allow.
+**Output:** permissionDecision: allow plus updatedInput.
 
 ```json
 {"hookSpecificOutput": {
@@ -580,9 +632,9 @@ class: compact
 
 **When:** After a tool has already produced effects and output.
 
-**Input:** tool_input and tool_response.
+**Extra input (selected):** tool_input and tool_response.
 
-**Effect:** Replace the model-facing result with review feedback.
+**Output:** decision: block plus reason replaces feedback after execution.
 
 ```json
 {
@@ -608,9 +660,9 @@ class: compact
 
 **When:** Alongside the operation that triggered the event.
 
-**Input:** The normal event payload; handler sets async:true.
+**Extra input (selected):** Same event payload; async is a handler setting.
 
-**Effect:** Deliver information at a safe point, without controlling the operation.
+**Output:** Informational context / warning only; no control decisions.
 
 ```json
 {
@@ -638,9 +690,9 @@ class: compact
 
 **When:** Before apply_patch executes.
 
-**Input:** tool_name is apply_patch; tool_input.command holds the patch.
+**Extra input (selected):** tool_name: apply_patch; tool_input.command: patch.
 
-**Effect:** Inspect the patch and allow or deny the supported call.
+**Output:** permissionDecision: deny prevents the supported patch call.
 
 ```json
 {
@@ -669,9 +721,9 @@ class: compact
 
 **When:** A matching lifecycle event calls an already-connected server.
 
-**Input:** Arguments expanded from the hook event.
+**Extra input (selected):** Arguments expanded from the matching event.
 
-**Effect:** Use the same event-specific output contract.
+**Output:** The matching event’s response contract applies.
 
 ```json
 {
@@ -700,9 +752,9 @@ class: compact
 
 **When:** Before a supported call; response handling depends on the result.
 
-**Input:** The normal tool event payload.
+**Extra input (selected):** Normal PreToolUse event fields.
 
-**Effect:** Explicit denial is different from a broken hook.
+**Output:** Exit 2 denies; errors / unsupported fields are not reliable denials.
 
 ```text
 deny-exit    Exit 2 with a reason on stderr
@@ -729,9 +781,9 @@ class: compact
 
 **When:** When a handler returns additionalContext.
 
-**Input:** A bounded context string and additionalContextLimit.
+**Extra input (selected):** SessionStart source; limit is a handler setting.
 
-**Effect:** Replace oversized context with a preview and saved-file reference.
+**Output:** additionalContext; oversized text becomes a preview / file reference.
 
 ```json
 {

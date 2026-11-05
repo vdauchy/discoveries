@@ -32,7 +32,13 @@ class: compact
 
 # Event, matcher, and handler
 
-<div class="flow">Event → <b>Matcher</b> → Handler → <b>Response</b></div>
+```mermaid
+flowchart LR
+  E["Event"] --> M{"Matcher selects it?"}
+  M -->|Yes| H["Run handler"]
+  M -->|No| S["Skip handler"]
+  H --> R["Apply supported response"]
+```
 
 - **Event:** selects the lifecycle point
 - **Matcher:** filters one event field
@@ -97,6 +103,60 @@ Matcher does not search shell command text. Both Git operations are tool_name Ba
 class: compact
 ---
 
+# Common input fields
+
+Every command hook receives **one JSON object on stdin**.
+
+```json
+{
+  "session_id": "session-123",
+  "hook_event_name": "PreToolUse",
+  "cwd": "/project",
+  "model": "active-model",
+  "transcript_path": null
+}
+```
+
+**Shared fields above** + **event-specific fields on the next slides**.
+
+<p class="caption">transcript_path can be null. turn_id and permission_mode occur only on some events.</p>
+
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#common-input-fields" target="_blank" rel="noopener noreferrer">Official shared input fields</a></p>
+
+<!--
+The object is the common input envelope; an actual tool event also adds tool-specific fields. model is a Codex extension. transcript_path may be null and its file format is not stable. turn_id is listed in turn-scoped event tables, and permission_mode is present on the supported subset, not every event. Event slides show selected extra fields; use their official links for complete types and requirements. Source: https://learn.chatgpt.com/docs/hooks#common-input-fields
+-->
+
+---
+class: compact
+---
+
+# Common output fields
+
+**There is no output object or field required on every hook.**
+
+| Shared response field | Meaning, where supported |
+| --- | --- |
+| `systemMessage` | Warning in the UI / event stream |
+| `continue` | Event-specific flow control |
+| `stopReason` | Reason accompanying that flow control |
+
+**Exit 0 with no output:** success; normal flow continues.
+
+**Event-specific outputs** such as `permissionDecision`, `decision`, and `additionalContext` are shown with each event.
+
+<p class="caption">These shared keys are not supported by every event. suppressOutput is parsed but not implemented.</p>
+
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#common-output-fields" target="_blank" rel="noopener noreferrer">Official shared outputs and event restrictions</a></p>
+
+<!--
+Do not present common output fields as mandatory or universally supported. SessionStart, PreCompact, PostCompact, UserPromptSubmit, SubagentStop, and Stop support the documented common shape. SubagentStart supports systemMessage and hook context, but continue:false does not prevent starting. PreToolUse and PermissionRequest do not support continue/stopReason. PostToolUse has its own continue:false behavior. Model-request outputs are diagnostic only; SessionEnd is advisory. Plain stdout text is developer context on SessionStart, SubagentStart, and UserPromptSubmit; it is ignored or invalid on other events. Source: https://learn.chatgpt.com/docs/hooks#common-output-fields
+-->
+
+---
+class: compact
+---
+
 # How demo.sh starts a scenario
 
 ```sh
@@ -104,11 +164,14 @@ cd codex-hooks-workshop
 ./demo.sh 02
 ```
 
-1. Finds scenario **02** by reading each directory’s `manifest.json`.
-2. Starts Codex CLI with **02-command-guard/** as its working directory.
-3. Codex loads that scenario’s trusted hook configuration and runs matching hooks.
+```mermaid
+flowchart LR
+  M["Read manifests"] --> I["Select ID 02"]
+  I --> C["Start Codex"]
+  C --> H["Load trusted hooks"]
+```
 
-**Then enter the prompt shown on the event slide.**
+Codex starts in **02-command-guard/**. Then enter the event slide’s prompt.
 
 <p class="caption">Review project and hook trust when prompted. The launcher starts Codex; Codex triggers the hooks.</p>
 
@@ -126,9 +189,9 @@ class: compact
 
 **When:** When a session starts, resumes, clears, compacts, or forks.
 
-**Input:** source; shared session fields.
+**Extra input (selected):** source; permission_mode.
 
-**Effect:** Add developer context to the model.
+**Output:** additionalContext adds developer context.
 
 ```json
 {"hookSpecificOutput": {
@@ -154,9 +217,9 @@ class: compact
 
 **When:** Before a supported local tool executes.
 
-**Input:** tool_name, tool_input, tool_use_id, turn_id.
+**Extra input (selected):** tool_name, tool_input, tool_use_id.
 
-**Effect:** Deny, add context, or rewrite tool input.
+**Output:** permissionDecision: deny; optionally context or rewritten input.
 
 ```json
 {"hookSpecificOutput": {
@@ -183,9 +246,9 @@ class: compact
 
 **When:** After supported tool output, including a failed shell command.
 
-**Input:** tool_name, tool_input, tool_response, tool_use_id.
+**Extra input (selected):** tool_name, tool_input, tool_response, tool_use_id.
 
-**Effect:** Add context or replace feedback; cannot undo the action.
+**Output:** additionalContext or decision/reason; the action already ran.
 
 ```json
 {"hookSpecificOutput": {
