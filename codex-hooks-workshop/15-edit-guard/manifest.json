@@ -1,0 +1,12 @@
+{
+  "id": "15",
+  "directory": "15-edit-guard",
+  "title": "File-edit guard",
+  "events": [
+    "PreToolUse"
+  ],
+  "use_case": "Inspect an apply_patch call rather than shell execution.",
+  "action": "Ask: Use apply_patch to change protected.txt to Changed. If blocked, report the denial and do not try another tool. Then ask apply_patch to add notes.txt.",
+  "evidence": "The protected patch is denied; an unrelated patch is allowed.",
+  "caveat": "Narrow header check for the exact relative path only. Shell writes and alternate spellings are outside this example. apply_patch also matches Edit and Write aliases."
+}

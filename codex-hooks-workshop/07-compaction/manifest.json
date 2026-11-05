@@ -1,0 +1,14 @@
+{
+  "id": "07",
+  "directory": "07-compaction",
+  "title": "Compaction checkpoint",
+  "events": [
+    "PreCompact",
+    "PostCompact",
+    "SessionStart"
+  ],
+  "use_case": "Save a small explicit task checkpoint and restore it after compaction.",
+  "action": "Have a short conversation about a synthetic failing test, then run `/compact`. Inspect .demo/events.jsonl and checkpoint.json.",
+  "evidence": "PreCompact saves a checkpoint; PostCompact reports completion; SessionStart source compact supplies the saved task context.",
+  "caveat": "Checkpoint contents are synthetic, not an automatic transcript summary. Manual and automatic triggers are supported, but the live exercise uses manual compaction."
+}

@@ -1,0 +1,12 @@
+{
+  "id": "14",
+  "directory": "14-background-hook",
+  "title": "Background execution",
+  "events": [
+    "PostToolUse"
+  ],
+  "use_case": "Move informational work off the synchronous path.",
+  "action": "Ask: Run exactly `python3 hello.py` and briefly explain the result. Keep the session open; inspect .demo/background-finished.txt after a second.",
+  "evidence": "Foreground completes while a delayed hook records completion.",
+  "caveat": "async:true cannot block, allow, rewrite, or request continuation. Delivery waits for a safe point; if idle, the next user turn. Unfinished work is cancelled at session end."
+}

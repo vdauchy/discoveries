@@ -1,0 +1,12 @@
+{
+  "id": "12",
+  "directory": "12-input-rewrite",
+  "title": "Tool input rewriting",
+  "events": [
+    "PreToolUse"
+  ],
+  "use_case": "Add a default option to a known demo command.",
+  "action": "Ask: Run exactly `python3 greet.py` once.",
+  "evidence": "Codex runs the replacement command and prints Hello, workshop! rather than Hello, default!.",
+  "caveat": "updatedInput must accompany permissionDecision allow. Bash/apply_patch require a string command. Existing input fields are preserved."
+}

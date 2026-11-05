@@ -18,3 +18,18 @@
 .slidev-layout.compact pre { font-size: 16px !important; line-height: 1.4 !important; }
 .slidev-layout.compact table { font-size: 18px; }
 .slidev-layout.compact td, .slidev-layout.compact th { padding: 7px 10px; }
+
+.slidev-layout.compact .try-it {
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-left: 3px solid #6ee7c0;
+  font-size: 17px;
+  line-height: 1.35;
+  background: #152638;
+}
+.slidev-layout.compact .try-it span { color: #b8c9dc; font-size: 15px; }
+
+.slidev-layout.compact { padding: 32px 44px; }
+.slidev-layout.compact p { margin: 8px 0; }
+.slidev-layout.compact h1 { margin-bottom: 16px; }
+.slidev-layout.compact pre { font-size: 15px !important; line-height: 1.3 !important; }

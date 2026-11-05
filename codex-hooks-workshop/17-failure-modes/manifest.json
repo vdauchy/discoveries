@@ -1,0 +1,12 @@
+{
+  "id": "17",
+  "directory": "17-failure-modes",
+  "title": "Failure modes",
+  "events": [
+    "PreToolUse"
+  ],
+  "use_case": "Compare explicit denial with hook failures.",
+  "action": "Keep mode.txt as pass initially. Ask for `python3 hello.py`. Then set mode.txt to deny-exit, error, invalid-json, unsupported, or timeout, review changes if prompted, and repeat the command.",
+  "evidence": "Exit 2 is a policy denial; other modes show a failing hook or unsupported-field report. Fixtures show each response separately.",
+  "caveat": "Do not use errors as a policy mechanism. This scenario is intentionally broken in some modes. Restore mode.txt to pass with reset before leaving it."
+}

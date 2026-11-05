@@ -1,0 +1,12 @@
+{
+  "id": "06",
+  "directory": "06-stop-check",
+  "title": "Completion check",
+  "events": [
+    "Stop"
+  ],
+  "use_case": "Run a check when the main turn tries to finish.",
+  "action": "Reset first. Ask: Reply Ready. Let the Stop hook request its follow-up check.",
+  "evidence": "The hook detects answer.txt = 41, requests a continuation, and Codex changes it to 42 and runs check.py.",
+  "caveat": "stop_hook_active bounds follow-ups to one. A failed second check produces a warning and releases the demo; this is not an indefinite quality gate."
+}

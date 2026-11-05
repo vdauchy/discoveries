@@ -1,6 +1,6 @@
 # Codex CLI hooks — complete workshop
 
-**14 supported lifecycle events, 18 runnable labs, and a full Slidev presentation.** The original five-minute introduction remains available as presentation/quickstart.md. The expanded workshop is modular; allow approximately 60–90 minutes for all live exercises and discussion.
+**14 supported lifecycle events, 18 runnable labs, and a full Slidev presentation.** A shorter introduction is available as presentation/quickstart.md. Both decks focus on hook concepts and contracts. Event slides include the launcher command, a prompt, and any action needed to trigger the hook; full setup instructions remain in the scenario guides. The expanded workshop is modular; allow approximately 60–90 minutes for all live exercises and discussion.
 
 ## Start the presentation
 
@@ -19,7 +19,29 @@ sh codex-hooks-workshop/demo.sh list
 sh codex-hooks-workshop/demo.sh 01
 ```
 
-Replace 01 with any ID below. The original context, block, and log aliases still work. Each scenario has its own hook configuration, Python implementation, fixtures, and live guide. The permission scenario starts Codex with read-only sandbox and on-request approvals; the others use normal local policy.
+Replace 01 with any ID below. The original context, block, and log aliases still work. Each scenario has its own manifest.json, hook configuration, Python implementation, fixtures, and live guide. The launcher discovers manifests from immediate child directories; no central registration file is needed. The permission scenario starts Codex with read-only sandbox and on-request approvals; the others use normal local policy.
+
+## Add a scenario
+
+Create a directory next to the existing scenarios. Its manifest.json contains a single object with these fields:
+
+- id: a unique string containing at least two digits, such as "19".
+- directory: exactly the containing folder name.
+- title, use_case, action, evidence, caveat: non-empty descriptive strings.
+- events: the event names defined by that directory’s .codex/hooks.json.
+
+Copy an existing manifest as a starting point, update its id and directory, and add the corresponding hook scripts/configuration. Both list and launch discover it automatically. The launcher rejects duplicate IDs, malformed metadata, missing hook configuration, and event/config mismatches with a clear error.
+
+For special CLI settings, an optional launch object supports sandbox ("read-only" or "workspace-write") and approval ("on-request" or "never"). For example, the permission scenario declares:
+
+~~~json
+"launch": {
+  "sandbox": "read-only",
+  "approval": "on-request"
+}
+~~~
+
+Other scenarios omit launch to use normal local policy. Adding a case requires no changes to demo.sh or demo.py. Fixture playback discovers the same manifests; provide fixtures.json to use replay.py. Reset removes known generated outputs from discovered directories.
 
 ## Official input/output formats
 
@@ -70,7 +92,7 @@ Playback uses synthetic event objects in isolated temporary copies, checks respo
 
 ## Presentation maintenance
 
-The default deck includes speaker notes, live actions, expected evidence, and event-specific caveats. The retained short deck is optional: from presentation/, run `npx --no-install slidev quickstart.md`. Build or export the full deck from that directory using `npm run build` or `npm run export`; install Chromium with `npx --no-install playwright install chromium` before PDF export if needed.
+The default deck explains lifecycle events, matcher semantics, input/output contracts, and event-specific caveats. Scenario READMEs contain live actions and expected evidence. The retained short deck is optional: from presentation/, run `npx --no-install slidev quickstart.md`. Build or export the full deck from that directory using `npm run build` or `npm run export`; install Chromium with `npx --no-install playwright install chromium` before PDF export if needed.
 
 The npm overrides pin patched dompurify and image-size versions pending upstream dependency updates. No CI, global hooks, plugin installation, or managed policies are installed by this repository.
 

@@ -1,0 +1,12 @@
+{
+  "id": "16",
+  "directory": "16-mcp-handler",
+  "title": "MCP tool handler",
+  "events": [
+    "PreToolUse"
+  ],
+  "use_case": "Route a policy check through an existing local MCP connection.",
+  "action": "Check `/mcp` shows workshop_checker connected, then ask for the exact simulated production deployment command from scenario 02.",
+  "evidence": "Local check_command returns a denial; .demo/events.jsonl records the decision.",
+  "caveat": "The handler does not connect servers itself. Missing servers, tool errors, and timeouts do not block. MCP handlers are synchronous and cannot handle SessionEnd."
+}

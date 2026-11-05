@@ -1,7 +1,7 @@
 ---
 theme: default
 title: Codex CLI hooks
-info: Three practical examples for software engineers in five minutes
+info: Lifecycle events, matcher filters, and event-specific input and output contracts
 colorSchema: dark
 fonts:
   sans: Arial
@@ -16,200 +16,211 @@ mdc: true
 
 # Codex CLI hooks
 
-<p class="lead">Add context. Check a command.<br>Observe the result.</p>
+<p class="lead">Run code at defined points in the agent lifecycle</p>
 
-Three Python scripts · Five minutes · Software engineers
+Add runtime context · Check tool calls · Observe execution
 
-<div class="flow"><b>SessionStart</b> → <b>PreToolUse</b> → <b>PostToolUse</b></div>
-
-<p class="caption">Examples prepared for Codex CLI 0.166.0 · 4 November 2026</p>
+**Events, matchers, handlers, and response contracts**
 
 <!--
-0:00–0:15. Today we will see three places where a small script can participate in the Codex lifecycle. No services or actual deployments are involved.
-Source: https://learn.chatgpt.com/docs/hooks
+Hooks are runtime callbacks, distinct from instructions that ask the model to remember a workflow. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
 ---
+class: compact
+---
 
-# The hook contract
+# Event, matcher, and handler
 
-<div class="flow">Codex event → <b>Matcher</b> → Script → <b>Response</b></div>
+<div class="flow">Event → <b>Matcher</b> → Handler → <b>Response</b></div>
+
+- **Event:** selects the lifecycle point
+- **Matcher:** filters one event field
+- **Handler:** runs code and inspects the payload
+- **Response:** provides context, a decision, feedback, or diagnostics
+
+<!--
+A hook is a runtime callback. The matcher does not replace script logic; it only determines which event occurrences reach the handler. Source: https://learn.chatgpt.com/docs/hooks#config-shape
+-->
+
+---
+class: compact
+---
+
+# What matcher means
+
+**A regular-expression filter applied before the handler runs.**
 
 ```json
-{
-  "hooks": {
-    "PreToolUse": [{
-      "matcher": "^Bash$",
-      "hooks": [{ "type": "command", "command": "python3 .../hook.py" }]
-    }]
-  }
-}
+"PreToolUse": [{
+  "matcher": "^Bash$",
+  "hooks": [{
+    "type": "command",
+    "command": "python3 check.py"
+  }]
+}]
 ```
 
-**JSON in** through stdin · **JSON out** through stdout
+Run `check.py` before supported tools named exactly **Bash**.
 
-<p class="caption">Project configuration: .codex/hooks.json · Review and trust through /hooks</p>
+`^` = beginning · `$` = end · `|` = alternatives
+
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#matcher-patterns" target="_blank" rel="noopener noreferrer">Official contract and behavior</a></p>
 
 <!--
-0:15–0:40. Show the actual 02-command-guard/.codex/hooks.json, explaining that the slide abbreviates the script path. Event chooses when, matcher chooses which tool, command chooses what runs. Bash matches CLI shell execution. Hooks run automatically after review; the model does not choose whether to invoke them. Preparation and trust are already complete.
-Source: https://learn.chatgpt.com/docs/hooks
+The event chooses when; matcher filters one defined event field; the handler makes a content-based decision. Omit matcher, use an empty string, or the special * value to match every occurrence. Matching still requires an enabled, trusted hook. Source: https://learn.chatgpt.com/docs/hooks#matcher-patterns
 -->
 
 ---
+class: compact
+---
 
-# 1 · Supply runtime context
+# Tool name versus command content
 
-**SessionStart** reads the selected environment before the model starts.
+With `PreToolUse` and `"matcher": "^Bash$"`:
 
-```python
-context = f"Selected deployment environment: {environment}."
-print(json.dumps({"hookSpecificOutput": {
-    "hookEventName": "SessionStart",
-    "additionalContext": context
-}}))
+| Pending tool call | Handler runs? |
+| --- | --- |
+| Bash → `git status` | Yes |
+| Bash → `git push` | Yes |
+| apply_patch → edit a file | No |
+
+To distinguish the two Git commands, inspect **`tool_input.command`** inside the handler.
+
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#matcher-patterns" target="_blank" rel="noopener noreferrer">Official contract and behavior</a></p>
+
+<!--
+Matcher does not search shell command text. Both Git operations are tool_name Bash. A git push matcher would not select them. Filename checks also belong in the handler. Source: https://learn.chatgpt.com/docs/hooks#matcher-patterns
+-->
+
+---
+class: compact
+---
+
+# How demo.sh starts a scenario
+
+```sh
+cd codex-hooks-workshop
+./demo.sh 02
 ```
 
-**Ask:** Which deployment environment is selected?<br>Answer in one sentence without using tools.
+1. Finds scenario **02** by reading each directory’s `manifest.json`.
+2. Starts Codex CLI with **02-command-guard/** as its working directory.
+3. Codex loads that scenario’s trusted hook configuration and runs matching hooks.
 
-```text
-Expected: The selected deployment environment is staging.
+**Then enter the prompt shown on the event slide.**
+
+<p class="caption">Review project and hook trust when prompted. The launcher starts Codex; Codex triggers the hooks.</p>
+
+<!--
+The shell entry point resolves its own directory and delegates to demo.py. It discovers immediate child directories containing manifest.json, validates their declared event names against .codex/hooks.json, and selects the requested ID. For ordinary scenarios it execs codex --no-daemon -C with the absolute scenario path. This is a separate local Codex process; --no-daemon avoids the shared daemon. Scenario 05 declares a read-only sandbox and on-request approval policy in its manifest to make permission requests observable. The script does not itself invoke hook.py, establish hook trust, or submit a prompt. Review the project and hooks through /hooks; restart a startup-context session after review when needed. Each scenario directory contains its own .codex/hooks.json. This launch command is separate from make start, which serves the presentation.
+Repository source: codex-hooks-workshop/demo.sh
+Hook discovery reference: https://learn.chatgpt.com/docs/hooks#where-codex-looks-for-hooks
+-->
+
+---
+class: compact
+---
+
+# SessionStart: runtime context
+
+**When:** When a session starts, resumes, clears, compacts, or forks.
+
+**Input:** source; shared session fields.
+
+**Effect:** Add developer context to the model.
+
+```json
+{"hookSpecificOutput": {
+  "hookEventName": "SessionStart",
+  "additionalContext": "Selected environment: staging."
+}}
 ```
 
 <p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#sessionstart" target="_blank" rel="noopener noreferrer">Official SessionStart I/O</a></p>
 
+<div class="try-it"><strong>Run <code>./demo.sh 01</code></strong> <span>(from codex-hooks-workshop/)</span><br><strong>Prompt:</strong> In a new session: “Which deployment environment is selected? Answer without using tools.”</div>
+
 <!--
-0:40–1:40. Terminal: sh codex-hooks-workshop/demo.sh context. If already opened during prep, use the prepared fresh session. Paste the prompt on the slide. Show environment.txt contains staging and hook.py reads it at startup. The result is illustrative, not an exact wording assertion. The model receives context calculated by a script. Use AGENTS.md for enduring written conventions.
-If latency is high, use the expected answer and show the actual hook response with the local fixture command from the appendix.
-Source: https://learn.chatgpt.com/docs/hooks#sessionstart
+Match source compact to restore context after compaction. Plain text on stdout also becomes developer context.
+Examples illustrate the contract rather than a recorded execution. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
 ---
+class: compact
+---
 
-# 2 · Check before execution
+# PreToolUse: checking an operation
 
-**PreToolUse** denies the simulated production command.
+**When:** Before a supported local tool executes.
 
-```sh
-python3 deploy.py --env production
-```
+**Input:** tool_name, tool_input, tool_use_id, turn_id.
+
+**Effect:** Deny, add context, or rewrite tool input.
 
 ```json
 {"hookSpecificOutput": {
   "hookEventName": "PreToolUse",
   "permissionDecision": "deny",
-  "permissionDecisionReason":
-    "Workshop policy: production deployment is blocked. Use staging."
+  "permissionDecisionReason": "Production operation blocked."
 }}
 ```
 
-Then run `python3 deploy.py --env staging` → **local marker created**
-
-<p class="caption">Exact demo command check only. No actual deployment or complete shell policy.</p>
-
 <p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#pretooluse" target="_blank" rel="noopener noreferrer">Official PreToolUse I/O</a></p>
 
+<div class="try-it"><strong>Run <code>./demo.sh 02</code></strong> <span>(from codex-hooks-workshop/)</span><br><strong>Prompt:</strong> Run exactly python3 deploy.py --env production once. If blocked, report the denial and do not retry.<br><span>Then compare with python3 deploy.py --env staging.</span></div>
+
 <!--
-1:40–3:10. Terminal: sh codex-hooks-workshop/demo.sh block.
-Prompt: Run exactly `python3 deploy.py --env production` once. This is a local simulation. If blocked, report the denial and do not try another command.
-Show the denial and absence of deployment-production.txt. Then prompt: Run exactly `python3 deploy.py --env staging`. Show simulated staging output and deployment-staging.txt. The guard deliberately only recognizes this token sequence; do not imply it prevents all ways to modify production. Do not run deploy.py production directly from the presenter terminal as a hook demonstration: only Codex tool calls trigger the hook.
-Source: https://learn.chatgpt.com/docs/hooks#pretooluse
+For Bash and apply_patch, the inspected command is tool_input.command. Other local tools send their argument object.
+Examples illustrate the contract rather than a recorded execution. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
 ---
+class: compact
+---
 
-# 3 · Observe a completed command
+# PostToolUse: observing completion
 
-**PostToolUse** appends metadata to a local JSONL file.
+**When:** After supported tool output, including a failed shell command.
 
-```sh
-python3 hello.py
-# Hello from the hooks workshop!
-```
+**Input:** tool_name, tool_input, tool_response, tool_use_id.
+
+**Effect:** Add context or replace feedback; cannot undo the action.
 
 ```json
-{
-  "event": "PostToolUse",
-  "tool": "Bash",
-  "session_id": "example-session",
-  "timestamp": "2026-11-04T18:00:00+00:00"
-}
+{"hookSpecificOutput": {
+  "hookEventName": "PostToolUse",
+  "additionalContext": "The command updated generated files."
+}}
 ```
 
-**Use for:** debugging and workflow visibility
-
-<p class="caption">Illustrative entry · Actual records are one JSON object per line · The command already ran</p>
+<p class="caption">Example response: adds context after the tool has run.</p>
 
 <p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#posttooluse" target="_blank" rel="noopener noreferrer">Official PostToolUse I/O</a></p>
 
+<div class="try-it"><strong>Run <code>./demo.sh 03</code></strong> <span>(from codex-hooks-workshop/)</span><br><strong>Prompt:</strong> Run exactly python3 hello.py once, then briefly report its output.</div>
+
 <!--
-3:10–4:20. Terminal: sh codex-hooks-workshop/demo.sh log.
-Prompt: Run exactly `python3 hello.py` once, then briefly report its output.
-Separate terminal from repository root: cat codex-hooks-workshop/03-tool-log/events.jsonl
-Explain that no command contents, outputs, or prompts are stored. Additional calls can create more entries. PostToolUse cannot undo side effects. The example ID and timestamp on the slide are illustrative.
-Source: https://learn.chatgpt.com/docs/hooks#posttooluse
+The response example adds context. A handler that only records metadata can instead return {}.
+Examples illustrate the contract rather than a recorded execution. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
 ---
-
-# Choosing the right mechanism
-
-| Need | Mechanism |
-| --- | --- |
-| Persistent project conventions | AGENTS.md |
-| Context calculated at startup | SessionStart |
-| Check a supported tool call first | PreToolUse |
-| Observe a completed tool call | PostToolUse |
-
-**Event → matcher → script → response**
-
-<p class="caption">Start with one small script and one observable result</p>
-
-<!--
-4:20–5:00. Recap the three outputs: context, denial, log. Static instructions fit AGENTS.md. Runtime hooks are useful when a repeatable action should happen at a defined lifecycle point. The examples are in the repository and can be read independently. Stop the timed presentation here. The remaining slides are optional reference.
-Sources: https://learn.chatgpt.com/docs/hooks and https://learn.chatgpt.com/docs/agents-md
--->
-
+class: compact
 ---
 
-# Reference · Setup and local checks
+# Official hook reference
 
-```sh
-# From the repository root
-codex --version
-codex features list
-python3 -m unittest discover -s codex-hooks-workshop/tests -v
-sh codex-hooks-workshop/demo.sh reset
-```
+[Every event and its input/output contract](https://learn.chatgpt.com/docs/hooks#hooks)
 
-- Trust the project and review definitions in `/hooks`
-- Restart the context session after review
-- Inspect all loaded sources: global hooks also run
-- Hook failures are not guaranteed denials
+[Matcher rules](https://learn.chatgpt.com/docs/hooks#matcher-patterns) · [Tool coverage](https://learn.chatgpt.com/docs/hooks#tool-coverage)
+
+[Common inputs](https://learn.chatgpt.com/docs/hooks#common-input-fields) · [Common outputs](https://learn.chatgpt.com/docs/hooks#common-output-fields)
+
+[Trust review](https://learn.chatgpt.com/docs/hooks#review-and-trust-hooks) · [MCP handlers](https://learn.chatgpt.com/docs/hooks#mcp-tool-hooks)
+
+<p class="caption">Local Codex CLI behavior · Reference checked 5 November 2026</p>
 
 <!--
-Outside the five-minute path. Setup should be completed before presenting. Tests exercise hook scripts and fixtures, not runtime enforcement. Trust and live rehearsal are distinct acceptance steps. Never bypass trust or sandboxing for convenience. See README troubleshooting if a hook is absent or fails.
-Sources: https://learn.chatgpt.com/docs/hooks and https://learn.chatgpt.com/docs/config-file/config-basic
--->
-
----
-
-# Reference · Sources and fallback
-
-[Official Codex hooks guide](https://learn.chatgpt.com/docs/hooks) · [Configuration layers](https://learn.chatgpt.com/docs/config-file/config-basic)
-
-[Slidev source](https://github.com/slidevjs/slidev) · [Syntax](https://sli.dev/guide/syntax.html) · [Export](https://sli.dev/guide/exporting.html)
-
-Direct hook inspection, without a model call:
-
-```sh
-printf '{"hook_event_name":"SessionStart"}' | \
-  python3 codex-hooks-workshop/01-session-context/hook.py
-```
-
-**This prints the response contract; it does not demonstrate CLI delivery.**
-
-<p class="caption">Scenario READMEs contain prompts and illustrative expected results</p>
-
-<!--
-Outside the five-minute path. Use fixture invocation to explain the wire contract when offline; explicitly distinguish this from live Codex runtime execution. All example outputs in the slides are illustrative. Official docs consulted 2026-11-04.
+Use the official release-behavior guide. Main-branch generated schemas can contain behavior not yet released.
 -->

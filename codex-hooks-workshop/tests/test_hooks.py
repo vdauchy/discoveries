@@ -58,6 +58,7 @@ class Hooks(unittest.TestCase):
 
     def test_reset_preserves_sources(self):
         shutil.copy(ROOT / "demo.sh", self.root / "demo.sh")
+        shutil.copy(ROOT / "demo.py", self.root / "demo.py")
         shutil.copy(ROOT / "reset.py", self.root / "reset.py")
         marker = self.root / "02-command-guard/deployment-staging.txt"
         marker.write_text("generated")

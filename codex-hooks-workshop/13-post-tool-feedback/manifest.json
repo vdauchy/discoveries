@@ -1,0 +1,12 @@
+{
+  "id": "13",
+  "directory": "13-post-tool-feedback",
+  "title": "Post-tool feedback",
+  "events": [
+    "PostToolUse"
+  ],
+  "use_case": "Replace feedback after a generator already ran.",
+  "action": "Ask: Run exactly `python3 generate.py` once, then report the outcome without rerunning it.",
+  "evidence": "The generated file exists and Codex receives review feedback instead of the original result.",
+  "caveat": "A PostToolUse block cannot undo the generated file. Code-mode promises reject for decision:block or exit 2, but continue:false has different behavior."
+}

@@ -36,6 +36,7 @@ This uses an isolated temporary copy and synthetic event inputs from fixtures.js
 
 ## Read the implementation
 
+- `manifest.json`: scenario identity, description, and declared events.
 - `.codex/hooks.json`: event, matcher, handler, timeout.
 - `server.py`: local JSON-RPC server; `.codex/config.toml`: connection configuration.
 - `fixtures.json`: synthetic success and edge cases with expected results.

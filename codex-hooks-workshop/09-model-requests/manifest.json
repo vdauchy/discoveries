@@ -1,0 +1,13 @@
+{
+  "id": "09",
+  "directory": "09-model-requests",
+  "title": "Model request telemetry",
+  "events": [
+    "PreModelRequest",
+    "PostModelRequest"
+  ],
+  "use_case": "Observe each model request attempt, including retries.",
+  "action": "Ask: Reply with one sentence describing a hook. Inspect .demo/events.jsonl and outcomes.jsonl.",
+  "evidence": "PreModelRequest and PostModelRequest record the model and outcome; token usage can be null.",
+  "caveat": "Diagnostic only: cannot block requests or inject context. One user turn can contain several request attempts. Failed/cancelled outcomes are synthetic fixture cases, not induced provider outages."
+}

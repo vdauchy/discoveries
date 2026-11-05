@@ -1,0 +1,12 @@
+{
+  "id": "18",
+  "directory": "18-large-context",
+  "title": "Large context output",
+  "events": [
+    "SessionStart"
+  ],
+  "use_case": "Demonstrate the context-output spill threshold with bounded synthetic text.",
+  "action": "Launch a new session and ask: Read the startup reference preview and state its topic briefly without tools.",
+  "evidence": "The hook returns 40 bounded synthetic reference lines; with additionalContextLimit 64, Codex should provide a shortened preview and saved-file reference.",
+  "caveat": "The limit is approximate tokens, not bytes. Fixture playback verifies the text only; spilling and file references require live CLI delivery. Do not put secrets in hook output."
+}

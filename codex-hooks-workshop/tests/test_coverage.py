@@ -12,6 +12,10 @@ ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("replay", ROOT / "replay.py")
 replay = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(replay)
+demo_spec = importlib.util.spec_from_file_location("demo", ROOT / "demo.py")
+demo = importlib.util.module_from_spec(demo_spec)
+demo_spec.loader.exec_module(demo)
+
 SUPPORTED = {"SessionStart", "SessionEnd", "UserPromptSubmit", "PreToolUse", "PermissionRequest",
              "PostToolUse", "PreModelRequest", "PostModelRequest", "PreCompact", "PostCompact",
              "SubagentStart", "SubagentStop", "Stop", "Interrupt"}
@@ -19,9 +23,9 @@ SUPPORTED = {"SessionStart", "SessionEnd", "UserPromptSubmit", "PreToolUse", "Pe
 class Coverage(unittest.TestCase):
     def test_all_supported_events_have_config_fixture_and_guide(self):
         configured, fixtures = set(), set()
-        catalog = json.loads((ROOT / "catalog.json").read_text())
-        self.assertEqual(len(catalog), 18)
-        for item in catalog:
+        scenarios = demo.discover()
+        self.assertEqual(len(scenarios), 18)
+        for item in scenarios:
             folder = ROOT / item["directory"]
             self.assertTrue((folder / "README.md").exists())
             hooks = json.loads((folder / ".codex/hooks.json").read_text())["hooks"]
@@ -53,7 +57,8 @@ class Coverage(unittest.TestCase):
         self.assertEqual(fixtures, SUPPORTED)
 
     def test_synthetic_contracts(self):
-        for folder in sorted(ROOT.glob("[0-9][0-9]-*")):
+        for item in demo.discover():
+            folder = ROOT / item["directory"]
             for case in json.loads((folder / "fixtures.json").read_text()):
                 with self.subTest(scenario=folder.name, case=case["name"]):
                     replay.run_case(folder, case)
@@ -65,7 +70,7 @@ class Coverage(unittest.TestCase):
             fake.chmod(0o755)
             import os
             env = dict(os.environ, PATH=temp + os.pathsep + os.environ["PATH"])
-            for item in json.loads((ROOT / "catalog.json").read_text()):
+            for item in demo.discover():
                 result = subprocess.run(["sh", str(ROOT / "demo.sh"), item["id"]], env=env,
                     capture_output=True, text=True, check=True)
                 args = result.stdout.splitlines()

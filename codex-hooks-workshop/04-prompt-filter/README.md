@@ -36,6 +36,7 @@ This uses an isolated temporary copy and synthetic event inputs from fixtures.js
 
 ## Read the implementation
 
+- `manifest.json`: scenario identity, description, and declared events.
 - `.codex/hooks.json`: event, matcher, handler, timeout.
 - `hook.py`: JSON stdin, small action, event-specific response.
 - `fixtures.json`: synthetic success and edge cases with expected results.

@@ -1,0 +1,12 @@
+{
+  "id": "02",
+  "directory": "02-command-guard",
+  "title": "Command denial",
+  "events": [
+    "PreToolUse"
+  ],
+  "use_case": "Check a specific shell command before execution.",
+  "action": "Ask: Run exactly `python3 deploy.py --env production` once. If blocked, report the denial and do not retry. Then ask for `python3 deploy.py --env staging`.",
+  "evidence": "Production is denied; only the staging marker exists.",
+  "caveat": "This exact-token check is not a complete shell security policy. Both deployments are local simulations."
+}

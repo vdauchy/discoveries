@@ -1,0 +1,12 @@
+{
+  "id": "11",
+  "directory": "11-session-end",
+  "title": "Session end",
+  "events": [
+    "SessionEnd"
+  ],
+  "use_case": "Record normal closure for local bookkeeping.",
+  "action": "Send a brief prompt, wait for the reply, then exit Codex normally using `/quit`. Inspect .demo/session-ended.json from another terminal.",
+  "evidence": "The session-end marker records reason other.",
+  "caveat": "Main thread only. Switching chats is not immediate session end. Abrupt process termination is not a reliable trigger; output is advisory."
+}

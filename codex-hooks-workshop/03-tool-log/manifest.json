@@ -1,0 +1,12 @@
+{
+  "id": "03",
+  "directory": "03-tool-log",
+  "title": "Tool logging",
+  "events": [
+    "PostToolUse"
+  ],
+  "use_case": "Record metadata after supported tool completion.",
+  "action": "Ask: Run exactly `python3 hello.py` once. Inspect events.jsonl from a separate terminal.",
+  "evidence": "A new JSONL entry records the completed shell call.",
+  "caveat": "A nonzero shell exit can still trigger PostToolUse. No raw prompt, command, or output is recorded by this logger."
+}

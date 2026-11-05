@@ -1,0 +1,12 @@
+{
+  "id": "10",
+  "directory": "10-interrupt",
+  "title": "Interruption",
+  "events": [
+    "Interrupt"
+  ],
+  "use_case": "Record an interrupted active main-thread turn.",
+  "action": "Ask: Run `python3 slow.py` and wait for it to finish. Press Esc while the turn is active. Inspect .demo/interrupted.json.",
+  "evidence": "A local record contains the interrupted turn ID.",
+  "caveat": "No event for idle threads or subagents. Output cannot prevent interruption or restart the turn. Stopping a turn does not guarantee rollback of tool side effects."
+}

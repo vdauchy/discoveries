@@ -1,7 +1,7 @@
 ---
 theme: default
-title: Codex CLI hooks — complete workshop
-info: Fourteen lifecycle events and eighteen practical labs for software engineers
+title: Codex CLI hooks
+info: Lifecycle events, matcher filters, and event-specific input and output contracts
 colorSchema: dark
 fonts:
   sans: Arial
@@ -16,36 +16,35 @@ mdc: true
 
 # Codex CLI hooks
 
-<p class="lead">The complete workshop</p>
+<p class="lead">Run code at defined points in the agent lifecycle</p>
 
-**14 lifecycle events · 18 practical labs**
+Add runtime context · Check tool calls · Observe execution
 
-Python scripts, a local MCP server, and observable results
-
-<p class="caption">Software engineers · Modular 60–90 minute session · CLI reference: 0.166.0</p>
+**Events, matchers, handlers, and response contracts**
 
 <!--
-Welcome. The first three labs still form a five-minute introduction. For this extended session, choose modules or work through the complete lifecycle. Setup and trust are completed before the presentation.
-Source: https://learn.chatgpt.com/docs/hooks
+Hooks are runtime callbacks, distinct from instructions that ask the model to remember a workflow. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
 ---
+class: compact
+---
 
-# Workshop routes
+# Event, matcher, and handler
 
-| Route | Labs | Suggested time |
-| --- | --- | --- |
-| Introduction | 01–03 | 5 minutes |
-| Every lifecycle event | 01–11 | 35–50 minutes |
-| Behavior and failure labs | 12–18 | 25–40 minutes |
+<div class="flow">Event → <b>Matcher</b> → Handler → <b>Response</b></div>
 
-**For each lab:** inspect → trigger → observe → explain
+- **Event:** selects the lifecycle point
+- **Matcher:** filters one event field
+- **Handler:** runs code and inspects the payload
+- **Response:** provides context, a decision, feedback, or diagnostics
 
 <!--
-Timing is a planning estimate, not a performance guarantee. Model response latency, permission setup, and compaction vary. Keep a separate terminal for evidence. Fixture playback is the offline alternative and must be labeled synthetic.
-Source: https://learn.chatgpt.com/docs/hooks
+A hook is a runtime callback. The matcher does not replace script logic; it only determines which event occurrences reach the handler. Source: https://learn.chatgpt.com/docs/hooks#config-shape
 -->
 
+---
+class: compact
 ---
 
 # The event lifecycle
@@ -61,10 +60,11 @@ Compaction, subagent activity, and interruptions add their own events.
 **SessionEnd** happens when the main session actually ends.
 
 <!--
-This is a conceptual path, not a complete guaranteed event ordering. Model attempts repeat; some tool paths opt out of hooks. PermissionRequest appears only when approval is actually needed. Stop ends a turn; SessionEnd closes the session.
-Source: https://learn.chatgpt.com/docs/hooks
+Explain how this behavior changes the agent lifecycle. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
+---
+class: compact
 ---
 
 # The JSON contract
@@ -73,7 +73,7 @@ Source: https://learn.chatgpt.com/docs/hooks
 {
   "hook_event_name": "PreToolUse",
   "session_id": "example-session",
-  "cwd": "/example/scenario",
+  "cwd": "/project",
   "tool_name": "Bash",
   "tool_input": { "command": "python3 hello.py" }
 }
@@ -86,10 +86,11 @@ Source: https://learn.chatgpt.com/docs/hooks
 [Common input fields](https://learn.chatgpt.com/docs/hooks#common-input-fields) · [Common output rules](https://learn.chatgpt.com/docs/hooks#common-output-fields)
 
 <!--
-Fields shown are an excerpt, not the complete schema. JSON responses differ by event. An empty successful response normally continues, but Stop and SubagentStop require valid JSON when returning output. Plain text is context for SessionStart, SubagentStart, and UserPromptSubmit; it is ignored or invalid elsewhere. Read actual hook.py files and fixtures.json.
-Source: https://learn.chatgpt.com/docs/hooks
+Illustrative input excerpt. Shared fields also include model and transcript_path; transcript format is not a stable API. tool_input is event-specific, not present on every event. Plain stdout is context for SessionStart, SubagentStart, and UserPromptSubmit; other events ignore or reject it. Source: https://learn.chatgpt.com/docs/hooks#common-input-fields
 -->
 
+---
+class: compact
 ---
 
 # Trust and configuration
@@ -102,13 +103,86 @@ Source: https://learn.chatgpt.com/docs/hooks
 **One event → matcher → handler → response**
 
 <!--
-Trusted project layer and trusted hook definition are separate requirements. Review changed definitions or plugin scripts again. Inline TOML is equivalent, but do not activate both forms at one layer unless intentional. Managed hooks are trusted by policy. No global or managed hooks are installed by this workshop.
-Source: https://learn.chatgpt.com/docs/hooks
+Trusted project layer and trusted hook definition are separate requirements. Config sources accumulate, so higher precedence does not remove lower hooks. Managed hooks are trusted by policy. Inline TOML and JSON at one layer merge with a warning. Source: https://learn.chatgpt.com/docs/hooks#review-and-trust-hooks
 -->
 
 ---
+class: compact
+---
 
-# Tool matchers
+# What matcher means
+
+**A regular-expression filter applied before the handler runs.**
+
+```json
+"PreToolUse": [{
+  "matcher": "^Bash$",
+  "hooks": [{
+    "type": "command",
+    "command": "python3 check.py"
+  }]
+}]
+```
+
+Run `check.py` before supported tools named exactly **Bash**.
+
+`^` = beginning · `$` = end · `|` = alternatives
+
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#matcher-patterns" target="_blank" rel="noopener noreferrer">Official contract and behavior</a></p>
+
+<!--
+The event chooses when; matcher filters one defined event field; the handler makes a content-based decision. Omit matcher, use an empty string, or the special * value to match every occurrence. Matching still requires an enabled, trusted hook. Source: https://learn.chatgpt.com/docs/hooks#matcher-patterns
+-->
+
+---
+class: compact
+---
+
+# Tool name versus command content
+
+With `PreToolUse` and `"matcher": "^Bash$"`:
+
+| Pending tool call | Handler runs? |
+| --- | --- |
+| Bash → `git status` | Yes |
+| Bash → `git push` | Yes |
+| apply_patch → edit a file | No |
+
+To distinguish the two Git commands, inspect **`tool_input.command`** inside the handler.
+
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#matcher-patterns" target="_blank" rel="noopener noreferrer">Official contract and behavior</a></p>
+
+<!--
+Matcher does not search shell command text. Both Git operations are tool_name Bash. A git push matcher would not select them. Filename checks also belong in the handler. Source: https://learn.chatgpt.com/docs/hooks#matcher-patterns
+-->
+
+---
+class: compact
+---
+
+# What each event matches
+
+| Event | Matcher filters |
+| --- | --- |
+| PreToolUse / PostToolUse / PermissionRequest | Tool name and aliases |
+| SessionStart | source: startup, resume, clear, compact, fork |
+| PreCompact / PostCompact | trigger: manual or auto |
+| SubagentStart / SubagentStop | agent_type |
+| SessionEnd | reason: currently other |
+
+**Ignored:** UserPromptSubmit, Stop, Interrupt, PreModelRequest, PostModelRequest
+
+<p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#matcher-patterns" target="_blank" rel="noopener noreferrer">Official contract and behavior</a></p>
+
+<!--
+Use ^startup$ for a fresh-session source and ^manual$ for manual compaction. Matcher is ignored on the listed events even if supplied. Conditional logic for those belongs in the script. Source: https://learn.chatgpt.com/docs/hooks#matcher-patterns
+-->
+
+---
+class: compact
+---
+
+# Tool names and aliases
 
 | Tool path | Matcher |
 | --- | --- |
@@ -120,37 +194,45 @@ Source: https://learn.chatgpt.com/docs/hooks
 Hosted tools such as WebSearch are outside this path.
 
 <!--
-Matcher is a regex. It is ignored on UserPromptSubmit, Stop, Interrupt, and model-request events. SessionStart matches source; compaction matches trigger; subagent events match agent_type; SessionEnd matches reason. write_stdin does not rerun PreToolUse for an existing command. Tool hooks are guardrails, not a complete enforcement boundary.
-Source: https://learn.chatgpt.com/docs/hooks
--->
-
----
-
-# Fixture playback versus live execution
-
-```sh
-python3 codex-hooks-workshop/replay.py all
-sh codex-hooks-workshop/demo.sh list
-```
-
-| Fixtures verify | Live CLI must verify |
-| --- | --- |
-| Script decisions and artifacts | Event delivery and matching |
-| Response JSON and exit codes | Trust and approval policy |
-| MCP stdio exchange | Background scheduling and spilling |
-
-<!--
-Fixtures run isolated copies with synthetic events. They do not mock the entire Codex runtime or establish enforcement. Never describe a fixture result as a recorded CLI run. The live checklist has no pre-marked results. The failure fixture intentionally spends five seconds reaching a timeout.
-Source: https://learn.chatgpt.com/docs/hooks
+Shell and exec_command match Bash. apply_patch also matches Edit/Write, but event input still reports apply_patch. MCP tools match their canonical names; spawn_agent also matches Agent. write_stdin does not rerun PreToolUse on an existing exec session. Hosted tools and some specialized paths do not use this hook path. Source: https://learn.chatgpt.com/docs/hooks#tool-coverage
 -->
 
 ---
 class: compact
 ---
 
-# 01 · Startup context
+# How demo.sh starts a scenario
 
-**SessionStart** · Supply runtime environment information.
+```sh
+cd codex-hooks-workshop
+./demo.sh 02
+```
+
+1. Finds scenario **02** by reading each directory’s `manifest.json`.
+2. Starts Codex CLI with **02-command-guard/** as its working directory.
+3. Codex loads that scenario’s trusted hook configuration and runs matching hooks.
+
+**Then enter the prompt shown on the event slide.**
+
+<p class="caption">Review project and hook trust when prompted. The launcher starts Codex; Codex triggers the hooks.</p>
+
+<!--
+The shell entry point resolves its own directory and delegates to demo.py. It discovers immediate child directories containing manifest.json, validates their declared event names against .codex/hooks.json, and selects the requested ID. For ordinary scenarios it execs codex --no-daemon -C with the absolute scenario path. This is a separate local Codex process; --no-daemon avoids the shared daemon. Scenario 05 declares a read-only sandbox and on-request approval policy in its manifest to make permission requests observable. The script does not itself invoke hook.py, establish hook trust, or submit a prompt. Review the project and hooks through /hooks; restart a startup-context session after review when needed. Each scenario directory contains its own .codex/hooks.json. This launch command is separate from make start, which serves the presentation.
+Repository source: codex-hooks-workshop/demo.sh
+Hook discovery reference: https://learn.chatgpt.com/docs/hooks#where-codex-looks-for-hooks
+-->
+
+---
+class: compact
+---
+
+# SessionStart: runtime context
+
+**When:** When a session starts, resumes, clears, compacts, or forks.
+
+**Input:** source; shared session fields.
+
+**Effect:** Add developer context to the model.
 
 ```json
 {"hookSpecificOutput": {
@@ -159,166 +241,85 @@ class: compact
 }}
 ```
 
-<p class="caption">Response or mechanism excerpt; read the complete hook alongside it.</p>
-
 <p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#sessionstart" target="_blank" rel="noopener noreferrer">Official SessionStart I/O</a></p>
 
+<div class="try-it"><strong>Run <code>./demo.sh 01</code></strong> <span>(from codex-hooks-workshop/)</span><br><strong>Prompt:</strong> In a new session: “Which deployment environment is selected? Answer without using tools.”</div>
+
 <!--
-Restart after hook review. Match startup, resume, clear, compact, or fork when needed; this example matches startup and resume.
-Show 01-session-context/hook.py (server.py for lab 16) and its hook configuration. Explain where the JSON fields differ from other events.
-Ask: Which deployment environment is selected? Answer without using tools.
-Source: https://learn.chatgpt.com/docs/hooks
+Match source compact to restore context after compaction. Plain text on stdout also becomes developer context.
+Examples illustrate the contract rather than a recorded execution. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
 ---
 class: compact
 ---
 
-# Live lab 01
+# PreToolUse: checking an operation
 
-```sh
-sh codex-hooks-workshop/demo.sh 01
-```
+**When:** Before a supported local tool executes.
 
-Ask which deployment environment is selected, without tools.
+**Input:** tool_name, tool_input, tool_use_id, turn_id.
 
-Answer reflects **staging** from startup context.
-
-<p class="caption">Use a new session after reviewing the hook.</p>
-
-```sh
-python3 codex-hooks-workshop/replay.py 01
-```
-
-<!--
-Allow 2–5 minutes for this lab depending on event setup and discussion.
-Full live action: Ask: Which deployment environment is selected? Answer without using tools.
-Expected evidence: Codex answers staging from hook context.
-Caveat: Restart after hook review. Match startup, resume, clear, compact, or fork when needed; this example matches startup and resume.
-Fallback: run replay.py 01 and identify the result as synthetic contract inspection, not a runtime recording. Reset only between closed demo sessions. See LIVE-CHECKLIST.md for rehearsal evidence.
-Source: https://learn.chatgpt.com/docs/hooks
--->
-
----
-class: compact
----
-
-# 02 · Command denial
-
-**PreToolUse** · Check a specific shell command before execution.
+**Effect:** Deny, add context, or rewrite tool input.
 
 ```json
 {"hookSpecificOutput": {
   "hookEventName": "PreToolUse",
   "permissionDecision": "deny",
-  "permissionDecisionReason": "Production simulation blocked."
+  "permissionDecisionReason": "Production operation blocked."
 }}
 ```
 
-<p class="caption">Response or mechanism excerpt; read the complete hook alongside it.</p>
-
 <p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#pretooluse" target="_blank" rel="noopener noreferrer">Official PreToolUse I/O</a></p>
 
+<div class="try-it"><strong>Run <code>./demo.sh 02</code></strong> <span>(from codex-hooks-workshop/)</span><br><strong>Prompt:</strong> Run exactly python3 deploy.py --env production once. If blocked, report the denial and do not retry.<br><span>Then compare with python3 deploy.py --env staging.</span></div>
+
 <!--
-This exact-token check is not a complete shell security policy. Both deployments are local simulations.
-Show 02-command-guard/hook.py (server.py for lab 16) and its hook configuration. Explain where the JSON fields differ from other events.
-Ask: Run exactly `python3 deploy.py --env production` once. If blocked, report the denial and do not retry. Then ask for `python3 deploy.py --env staging`.
-Source: https://learn.chatgpt.com/docs/hooks
+For Bash and apply_patch, the inspected command is tool_input.command. Other local tools send their argument object.
+Examples illustrate the contract rather than a recorded execution. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
 ---
 class: compact
 ---
 
-# Live lab 02
+# PostToolUse: observing completion
 
-```sh
-sh codex-hooks-workshop/demo.sh 02
-```
+**When:** After supported tool output, including a failed shell command.
 
-Run the exact production simulation, then the staging simulation.
+**Input:** tool_name, tool_input, tool_response, tool_use_id.
 
-**Production denied; staging marker created.**
-
-<p class="caption">An exact-token teaching check, not a complete shell policy.</p>
-
-```sh
-python3 codex-hooks-workshop/replay.py 02
-```
-
-<!--
-Allow 2–5 minutes for this lab depending on event setup and discussion.
-Full live action: Ask: Run exactly `python3 deploy.py --env production` once. If blocked, report the denial and do not retry. Then ask for `python3 deploy.py --env staging`.
-Expected evidence: Production is denied; only the staging marker exists.
-Caveat: This exact-token check is not a complete shell security policy. Both deployments are local simulations.
-Fallback: run replay.py 02 and identify the result as synthetic contract inspection, not a runtime recording. Reset only between closed demo sessions. See LIVE-CHECKLIST.md for rehearsal evidence.
-Source: https://learn.chatgpt.com/docs/hooks
--->
-
----
-class: compact
----
-
-# 03 · Tool logging
-
-**PostToolUse** · Record metadata after supported tool completion.
+**Effect:** Add context or replace feedback; cannot undo the action.
 
 ```json
-{
-  "event": "PostToolUse",
-  "tool": "Bash",
-  "session_id": "example-session",
-  "timestamp": "2026-11-04T18:00:00+00:00"
-}
+{"hookSpecificOutput": {
+  "hookEventName": "PostToolUse",
+  "additionalContext": "The command updated generated files."
+}}
 ```
 
-<p class="caption">Illustrative log record; the hook response itself is {}.</p>
+<p class="caption">Example response: adds context after the tool has run.</p>
 
 <p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#posttooluse" target="_blank" rel="noopener noreferrer">Official PostToolUse I/O</a></p>
 
+<div class="try-it"><strong>Run <code>./demo.sh 03</code></strong> <span>(from codex-hooks-workshop/)</span><br><strong>Prompt:</strong> Run exactly python3 hello.py once, then briefly report its output.</div>
+
 <!--
-A nonzero shell exit can still trigger PostToolUse. No raw prompt, command, or output is recorded by this logger.
-Show 03-tool-log/hook.py (server.py for lab 16) and its hook configuration. Explain where the JSON fields differ from other events.
-Ask: Run exactly `python3 hello.py` once. Inspect events.jsonl from a separate terminal.
-Source: https://learn.chatgpt.com/docs/hooks
+The response example adds context. A handler that only records metadata can instead return {}.
+Examples illustrate the contract rather than a recorded execution. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
 ---
 class: compact
 ---
 
-# Live lab 03
+# UserPromptSubmit: checking a prompt
 
-```sh
-sh codex-hooks-workshop/demo.sh 03
-```
+**When:** Before a user prompt is sent.
 
-Run `python3 hello.py`; inspect the JSONL from another terminal.
+**Input:** prompt and turn_id, plus common fields.
 
-**A new tool-completion record.**
-
-<p class="caption">Inspecting logs through Codex creates additional tool calls.</p>
-
-```sh
-python3 codex-hooks-workshop/replay.py 03
-```
-
-<!--
-Allow 2–5 minutes for this lab depending on event setup and discussion.
-Full live action: Ask: Run exactly `python3 hello.py` once. Inspect events.jsonl from a separate terminal.
-Expected evidence: A new JSONL entry records the completed shell call.
-Caveat: A nonzero shell exit can still trigger PostToolUse. No raw prompt, command, or output is recorded by this logger.
-Fallback: run replay.py 03 and identify the result as synthetic contract inspection, not a runtime recording. Reset only between closed demo sessions. See LIVE-CHECKLIST.md for rehearsal evidence.
-Source: https://learn.chatgpt.com/docs/hooks
--->
-
----
-class: compact
----
-
-# 04 · Prompt filtering
-
-**UserPromptSubmit** · Reject a synthetic sensitive marker and add task context.
+**Effect:** Add context or reject the submitted prompt.
 
 ```json
 {
@@ -327,222 +328,114 @@ class: compact
 }
 ```
 
-<p class="caption">Response or mechanism excerpt; read the complete hook alongside it.</p>
-
 <p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#userpromptsubmit" target="_blank" rel="noopener noreferrer">Official UserPromptSubmit I/O</a></p>
 
+<div class="try-it"><strong>Run <code>./demo.sh 04</code></strong> <span>(from codex-hooks-workshop/)</span><br><strong>Prompt:</strong> Explain DEMO_SECRET_123.<br><span>Then submit a normal prompt to compare.</span></div>
+
 <!--
-Only a synthetic marker is checked. Matcher is ignored for UserPromptSubmit. Never paste real credentials in the demo.
-Show 04-prompt-filter/hook.py (server.py for lab 16) and its hook configuration. Explain where the JSON fields differ from other events.
-Submit: Explain DEMO_SECRET_123. Observe rejection. Then submit: Explain how you would investigate a failing test.
-Source: https://learn.chatgpt.com/docs/hooks
+Matcher is ignored. Plain stdout text can add context. Return decision block or exit 2 with a reason to reject the prompt.
+Examples illustrate the contract rather than a recorded execution. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
 ---
 class: compact
 ---
 
-# Live lab 04
+# PermissionRequest: approval decisions
 
-```sh
-sh codex-hooks-workshop/demo.sh 04
-```
+**When:** Only when Codex is about to request approval.
 
-Submit `Explain DEMO_SECRET_123`, then a normal test question.
+**Input:** tool_name and tool_input; description may be present.
 
-**Marker rejected; normal prompt receives context.**
-
-<p class="caption">Only use the synthetic marker. Matcher is ignored here.</p>
-
-```sh
-python3 codex-hooks-workshop/replay.py 04
-```
-
-<!--
-Allow 2–5 minutes for this lab depending on event setup and discussion.
-Full live action: Submit: Explain DEMO_SECRET_123. Observe rejection. Then submit: Explain how you would investigate a failing test.
-Expected evidence: First prompt is blocked; the second receives brief explanation guidance.
-Caveat: Only a synthetic marker is checked. Matcher is ignored for UserPromptSubmit. Never paste real credentials in the demo.
-Fallback: run replay.py 04 and identify the result as synthetic contract inspection, not a runtime recording. Reset only between closed demo sessions. See LIVE-CHECKLIST.md for rehearsal evidence.
-Source: https://learn.chatgpt.com/docs/hooks
--->
-
----
-class: compact
----
-
-# 05 · Permission decisions
-
-**PermissionRequest** · Decide only when Codex is about to request approval.
+**Effect:** Allow, deny, or abstain to keep normal approval handling.
 
 ```json
 {"hookSpecificOutput": {
   "hookEventName": "PermissionRequest",
   "decision": {
     "behavior": "deny",
-    "message": "Demo policy denies this requested write."
+    "message": "Policy denies this requested write."
   }
 }}
 ```
 
-<p class="caption">Response or mechanism excerpt; read the complete hook alongside it.</p>
-
 <p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#permissionrequest" target="_blank" rel="noopener noreferrer">Official PermissionRequest I/O</a></p>
 
+<div class="try-it"><strong>Run <code>./demo.sh 05</code></strong> <span>(from codex-hooks-workshop/)</span><br><strong>Prompt:</strong> Run exactly python3 write_marker.py. If the sandbox rejects it, request elevated approval to rerun it.<br><span>Requires an actual approval request.</span></div>
+
 <!--
-Depends on approval policy and a real escalation. No approval request means no event. policy.txt can be deny, allow, or abstain; restart after changes if required by trust review. Allow is restricted to the exact local simulation command.
-Show 05-permission-request/hook.py (server.py for lab 16) and its hook configuration. Explain where the JSON fields differ from other events.
-Launch this scenario in read-only sandbox mode (the launcher does this). Ask: Execute exactly `python3 write_marker.py`; if the sandbox rejects the write, request approval to rerun it with elevated permissions. Do not use another mechanism.
-Source: https://learn.chatgpt.com/docs/hooks
+Use hookSpecificOutput.decision.behavior. If several matching hooks decide, deny wins; {} leaves the normal approval prompt. This event does not run on already-permitted operations.
+Examples illustrate the contract rather than a recorded execution. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
 ---
 class: compact
 ---
 
-# Live lab 05
+# Stop: checking completion
 
-```sh
-sh codex-hooks-workshop/demo.sh 05
-```
+**When:** When the main turn is about to finish.
 
-Run `python3 write_marker.py`; request escalation after sandbox rejection.
+**Input:** last_assistant_message, stop_hook_active, turn_id.
 
-**The permission hook denies the requested write.**
-
-<p class="caption">No approval request means no PermissionRequest event.</p>
-
-```sh
-python3 codex-hooks-workshop/replay.py 05
-```
-
-<!--
-Allow 2–5 minutes for this lab depending on event setup and discussion.
-Full live action: Launch this scenario in read-only sandbox mode (the launcher does this). Ask: Execute exactly `python3 write_marker.py`; if the sandbox rejects the write, request approval to rerun it with elevated permissions. Do not use another mechanism.
-Expected evidence: PermissionRequest denies the escalation and .demo/write-marker.txt remains absent.
-Caveat: Depends on approval policy and a real escalation. No approval request means no event. policy.txt can be deny, allow, or abstain; restart after changes if required by trust review. Allow is restricted to the exact local simulation command.
-Fallback: run replay.py 05 and identify the result as synthetic contract inspection, not a runtime recording. Reset only between closed demo sessions. See LIVE-CHECKLIST.md for rehearsal evidence.
-Source: https://learn.chatgpt.com/docs/hooks
--->
-
----
-class: compact
----
-
-# 06 · Completion check
-
-**Stop** · Run a check when the main turn tries to finish.
+**Effect:** Request another turn or allow completion.
 
 ```python
-if check_passed:
+if checks_passed:
     print("{}")
 elif payload.get("stop_hook_active"):
-    print(json.dumps({"systemMessage": "Demo retry limit reached."}))
+    print(json.dumps({"systemMessage": "Follow-up limit reached."}))
 else:
-    print(json.dumps({"decision": "block", "reason": "Fix the check."}))
+    print(json.dumps({"decision": "block", "reason": "Run checks."}))
 ```
-
-<p class="caption">Control-flow excerpt; the full script runs check.py.</p>
 
 <p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#stop" target="_blank" rel="noopener noreferrer">Official Stop I/O</a></p>
 
+<div class="try-it"><strong>Run <code>./demo.sh 06</code></strong> <span>(from codex-hooks-workshop/)</span><br><strong>Prompt:</strong> Reply Ready.<br><span>Start with answer.txt set to 41; the hook requests the follow-up check.</span></div>
+
 <!--
-stop_hook_active bounds follow-ups to one. A failed second check produces a warning and releases the demo; this is not an indefinite quality gate.
-Show 06-stop-check/hook.py (server.py for lab 16) and its hook configuration. Explain where the JSON fields differ from other events.
-Reset first. Ask: Reply Ready. Let the Stop hook request its follow-up check.
-Source: https://learn.chatgpt.com/docs/hooks
+Here decision block creates a continuation prompt using reason. Bound follow-ups with stop_hook_active. continue:false overrides continuation requests. Matcher is ignored.
+Examples illustrate the contract rather than a recorded execution. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
 ---
 class: compact
 ---
 
-# Live lab 06
+# Compaction: saving and restoring context
 
-```sh
-sh codex-hooks-workshop/demo.sh 06
-```
+**When:** PreCompact before compaction; PostCompact after it.
 
-With answer.txt reset to 41, ask Codex to reply Ready.
+**Input:** trigger: manual or auto; turn_id.
 
-**Check fails → continuation → answer becomes 42 → PASS.**
-
-<p class="caption">One follow-up maximum; a repeated failure is reported, not looped.</p>
-
-```sh
-python3 codex-hooks-workshop/replay.py 06
-```
-
-<!--
-Allow 2–5 minutes for this lab depending on event setup and discussion.
-Full live action: Reset first. Ask: Reply Ready. Let the Stop hook request its follow-up check.
-Expected evidence: The hook detects answer.txt = 41, requests a continuation, and Codex changes it to 42 and runs check.py.
-Caveat: stop_hook_active bounds follow-ups to one. A failed second check produces a warning and releases the demo; this is not an indefinite quality gate.
-Fallback: run replay.py 06 and identify the result as synthetic contract inspection, not a runtime recording. Reset only between closed demo sessions. See LIVE-CHECKLIST.md for rehearsal evidence.
-Source: https://learn.chatgpt.com/docs/hooks
--->
-
----
-class: compact
----
-
-# 07 · Compaction checkpoint
-
-**PreCompact, PostCompact, SessionStart** · Save a small explicit task checkpoint and restore it after compaction.
+**Effect:** Observe or stop compaction; use SessionStart to restore context.
 
 ```text
-PreCompact                  Save synthetic checkpoint
+PreCompact                  Save task checkpoint
 PostCompact                 Record completed compaction
 SessionStart source=compact Restore checkpoint as context
 ```
 
-<p class="caption">Response or mechanism excerpt; read the complete hook alongside it.</p>
-
 <p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#precompact" target="_blank" rel="noopener noreferrer">Official PreCompact I/O</a> · <a href="https://learn.chatgpt.com/docs/hooks#postcompact" target="_blank" rel="noopener noreferrer">Official PostCompact I/O</a> · <a href="https://learn.chatgpt.com/docs/hooks#sessionstart" target="_blank" rel="noopener noreferrer">Official SessionStart I/O</a></p>
 
+<div class="try-it"><strong>Run <code>./demo.sh 07</code></strong> <span>(from codex-hooks-workshop/)</span><br><strong>Prompt:</strong> Explain how you would investigate a failing test.<br><span>Then run /compact to trigger PreCompact, PostCompact, and startup-context restoration.</span></div>
+
 <!--
-Checkpoint contents are synthetic, not an automatic transcript summary. Manual and automatic triggers are supported, but the live exercise uses manual compaction.
-Show 07-compaction/hook.py (server.py for lab 16) and its hook configuration. Explain where the JSON fields differ from other events.
-Have a short conversation about a synthetic failing test, then run `/compact`. Inspect .demo/events.jsonl and checkpoint.json.
-Source: https://learn.chatgpt.com/docs/hooks
+PreCompact continue:false stops before compaction; PostCompact continue:false stops after. SessionStart source compact is the supported point for adding restored developer context. A checkpoint must be created by your own logic.
+Examples illustrate the contract rather than a recorded execution. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
 ---
 class: compact
 ---
 
-# Live lab 07
+# SubagentStart and SubagentStop
 
-```sh
-sh codex-hooks-workshop/demo.sh 07
-```
+**When:** When a child agent starts or is about to finish.
 
-Discuss a synthetic test task, then invoke `/compact`.
+**Input:** agent_id, agent_type; stop adds last_assistant_message.
 
-**Checkpoint saved, compaction recorded, context restored.**
-
-<p class="caption">Use the event journal; do not assume an exact full event order.</p>
-
-```sh
-python3 codex-hooks-workshop/replay.py 07
-```
-
-<!--
-Allow 2–5 minutes for this lab depending on event setup and discussion.
-Full live action: Have a short conversation about a synthetic failing test, then run `/compact`. Inspect .demo/events.jsonl and checkpoint.json.
-Expected evidence: PreCompact saves a checkpoint; PostCompact reports completion; SessionStart source compact supplies the saved task context.
-Caveat: Checkpoint contents are synthetic, not an automatic transcript summary. Manual and automatic triggers are supported, but the live exercise uses manual compaction.
-Fallback: run replay.py 07 and identify the result as synthetic contract inspection, not a runtime recording. Reset only between closed demo sessions. See LIVE-CHECKLIST.md for rehearsal evidence.
-Source: https://learn.chatgpt.com/docs/hooks
--->
-
----
-class: compact
----
-
-# 08 · Subagent lifecycle
-
-**SubagentStart, SubagentStop** · Give reviewers instructions and request a missing verification note.
+**Effect:** Add child context at start; request a follow-up at stop.
 
 ```text
 SubagentStart → additionalContext → reviewer instructions
@@ -550,109 +443,58 @@ SubagentStop  → decision: block   → request a verification note
               → {}               → report complete
 ```
 
-<p class="caption">Response or mechanism excerpt; read the complete hook alongside it.</p>
-
 <p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#subagentstart" target="_blank" rel="noopener noreferrer">Official SubagentStart I/O</a> · <a href="https://learn.chatgpt.com/docs/hooks#subagentstop" target="_blank" rel="noopener noreferrer">Official SubagentStop I/O</a></p>
 
+<div class="try-it"><strong>Run <code>./demo.sh 08</code></strong> <span>(from codex-hooks-workshop/)</span><br><strong>Prompt:</strong> Use one read-only subagent to inspect README.md and report a short summary with a Tests: line. Wait for it to finish.</div>
+
 <!--
-Requires subagents enabled and an actual spawned child. A conforming report needs no retry; the missing-Tests fixture demonstrates continuation deterministically. SubagentStart cannot stop a child via continue:false.
-Show 08-subagent-lifecycle/hook.py (server.py for lab 16) and its hook configuration. Explain where the JSON fields differ from other events.
-Ask: Spawn one read-only subagent to inspect this scenario README and report a short summary. Have it state what tests it ran or did not run. Wait for it to finish.
-Source: https://learn.chatgpt.com/docs/hooks
+Matcher filters agent_type. SubagentStart continue:false does not prevent child startup. SubagentStop uses stop_hook_active for bounded continuation; continue:false overrides continuation decisions. Session ID refers to the parent.
+Examples illustrate the contract rather than a recorded execution. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
 ---
 class: compact
 ---
 
-# Live lab 08
+# PreModelRequest and PostModelRequest
 
-```sh
-sh codex-hooks-workshop/demo.sh 08
-```
+**When:** Before and after each model request attempt, including retries.
 
-Spawn one read-only reviewer to inspect this README and report tests.
+**Input:** model, turn_id; post adds status, error, token_usage.
 
-**Start and stop records; a Tests: line in its report.**
-
-<p class="caption">A conforming report needs no retry; use fixtures for that branch.</p>
-
-```sh
-python3 codex-hooks-workshop/replay.py 08
-```
-
-<!--
-Allow 2–5 minutes for this lab depending on event setup and discussion.
-Full live action: Ask: Spawn one read-only subagent to inspect this scenario README and report a short summary. Have it state what tests it ran or did not run. Wait for it to finish.
-Expected evidence: Journal contains SubagentStart and SubagentStop with the child identifier; report includes Tests:.
-Caveat: Requires subagents enabled and an actual spawned child. A conforming report needs no retry; the missing-Tests fixture demonstrates continuation deterministically. SubagentStart cannot stop a child via continue:false.
-Fallback: run replay.py 08 and identify the result as synthetic contract inspection, not a runtime recording. Reset only between closed demo sessions. See LIVE-CHECKLIST.md for rehearsal evidence.
-Source: https://learn.chatgpt.com/docs/hooks
--->
-
----
-class: compact
----
-
-# 09 · Model request telemetry
-
-**PreModelRequest, PostModelRequest** · Observe each model request attempt, including retries.
+**Effect:** Diagnostics only; cannot block or add model context.
 
 ```json
 {
+  "hook_event_name": "PostModelRequest",
   "status": "completed",
-  "token_usage": null,
-  "has_error": false
+  "error": null,
+  "token_usage": null
 }
 ```
 
-<p class="caption">Illustrative completion metadata; hook output is diagnostic only.</p>
+<p class="caption">Input excerpt; handler output remains diagnostic only.</p>
 
 <p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#premodelrequest-and-postmodelrequest" target="_blank" rel="noopener noreferrer">Official PreModelRequest I/O</a> · <a href="https://learn.chatgpt.com/docs/hooks#premodelrequest-and-postmodelrequest" target="_blank" rel="noopener noreferrer">Official PostModelRequest I/O</a></p>
 
+<div class="try-it"><strong>Run <code>./demo.sh 09</code></strong> <span>(from codex-hooks-workshop/)</span><br><strong>Prompt:</strong> Reply with one sentence describing a hook.<br><span>Both request events fire for the model attempt.</span></div>
+
 <!--
-Diagnostic only: cannot block requests or inject context. One user turn can contain several request attempts. Failed/cancelled outcomes are synthetic fixture cases, not induced provider outages.
-Show 09-model-requests/hook.py (server.py for lab 16) and its hook configuration. Explain where the JSON fields differ from other events.
-Ask: Reply with one sentence describing a hook. Inspect .demo/events.jsonl and outcomes.jsonl.
-Source: https://learn.chatgpt.com/docs/hooks
+status is completed, failed, or cancelled; token_usage can be null. agent_id and agent_type may also be present. A single user turn can contain several requests. The displayed object is an input excerpt; diagnostic handlers do not control the model request.
+Examples illustrate the contract rather than a recorded execution. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
 ---
 class: compact
 ---
 
-# Live lab 09
+# Interrupt: recording interruption
 
-```sh
-sh codex-hooks-workshop/demo.sh 09
-```
+**When:** An active main-thread turn is interrupted.
 
-Ask for a one-sentence reply; inspect events and outcomes.
+**Input:** turn_id, permission_mode, shared session fields.
 
-**Request attempt and completion records.**
-
-<p class="caption">Diagnostic only; failed/cancelled outcomes have fixture coverage.</p>
-
-```sh
-python3 codex-hooks-workshop/replay.py 09
-```
-
-<!--
-Allow 2–5 minutes for this lab depending on event setup and discussion.
-Full live action: Ask: Reply with one sentence describing a hook. Inspect .demo/events.jsonl and outcomes.jsonl.
-Expected evidence: PreModelRequest and PostModelRequest record the model and outcome; token usage can be null.
-Caveat: Diagnostic only: cannot block requests or inject context. One user turn can contain several request attempts. Failed/cancelled outcomes are synthetic fixture cases, not induced provider outages.
-Fallback: run replay.py 09 and identify the result as synthetic contract inspection, not a runtime recording. Reset only between closed demo sessions. See LIVE-CHECKLIST.md for rehearsal evidence.
-Source: https://learn.chatgpt.com/docs/hooks
--->
-
----
-class: compact
----
-
-# 10 · Interruption
-
-**Interrupt** · Record an interrupted active main-thread turn.
+**Effect:** Advisory bookkeeping; cannot restart or prevent interruption.
 
 ```json
 {
@@ -660,108 +502,56 @@ class: compact
 }
 ```
 
-<p class="caption">Response or mechanism excerpt; read the complete hook alongside it.</p>
-
 <p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#interrupt" target="_blank" rel="noopener noreferrer">Official Interrupt I/O</a></p>
 
+<div class="try-it"><strong>Run <code>./demo.sh 10</code></strong> <span>(from codex-hooks-workshop/)</span><br><strong>Prompt:</strong> Run python3 slow.py and wait for it to finish.<br><span>Press Esc while the turn is active.</span></div>
+
 <!--
-No event for idle threads or subagents. Output cannot prevent interruption or restart the turn. Stopping a turn does not guarantee rollback of tool side effects.
-Show 10-interrupt/hook.py (server.py for lab 16) and its hook configuration. Explain where the JSON fields differ from other events.
-Ask: Run `python3 slow.py` and wait for it to finish. Press Esc while the turn is active. Inspect .demo/interrupted.json.
-Source: https://learn.chatgpt.com/docs/hooks
+No event for idle threads or subagents. Output may contain systemMessage or be empty. Timeout is one to three seconds. Interruption does not guarantee rollback of tool effects.
+Examples illustrate the contract rather than a recorded execution. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
 ---
 class: compact
 ---
 
-# Live lab 10
+# SessionEnd: closing a session
 
-```sh
-sh codex-hooks-workshop/demo.sh 10
-```
+**When:** The main session actually ends.
 
-Run `python3 slow.py`; press Esc while the turn is active.
+**Input:** reason: currently other; shared session fields.
 
-**The interrupted turn ID is saved.**
-
-<p class="caption">Does not run for idle threads or children; cannot restart the turn.</p>
-
-```sh
-python3 codex-hooks-workshop/replay.py 10
-```
-
-<!--
-Allow 2–5 minutes for this lab depending on event setup and discussion.
-Full live action: Ask: Run `python3 slow.py` and wait for it to finish. Press Esc while the turn is active. Inspect .demo/interrupted.json.
-Expected evidence: A local record contains the interrupted turn ID.
-Caveat: No event for idle threads or subagents. Output cannot prevent interruption or restart the turn. Stopping a turn does not guarantee rollback of tool side effects.
-Fallback: run replay.py 10 and identify the result as synthetic contract inspection, not a runtime recording. Reset only between closed demo sessions. See LIVE-CHECKLIST.md for rehearsal evidence.
-Source: https://learn.chatgpt.com/docs/hooks
--->
-
----
-class: compact
----
-
-# 11 · Session end
-
-**SessionEnd** · Record normal closure for local bookkeeping.
+**Effect:** Advisory bookkeeping; cannot keep the session open.
 
 ```json
 {
-  "session_id": "example-session",
+  "hook_event_name": "SessionEnd",
   "reason": "other"
 }
 ```
 
-<p class="caption">Illustrative local marker; hook output is advisory.</p>
+<p class="caption">Input excerpt; a bookkeeping handler can return {}.</p>
 
 <p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#sessionend" target="_blank" rel="noopener noreferrer">Official SessionEnd I/O</a></p>
 
+<div class="try-it"><strong>Run <code>./demo.sh 11</code></strong> <span>(from codex-hooks-workshop/)</span><br><strong>Prompt:</strong> Reply with one sentence describing a hook.<br><span>After the reply, exit normally with /quit.</span></div>
+
 <!--
-Main thread only. Switching chats is not immediate session end. Abrupt process termination is not a reliable trigger; output is advisory.
-Show 11-session-end/hook.py (server.py for lab 16) and its hook configuration. Explain where the JSON fields differ from other events.
-Send a brief prompt, wait for the reply, then exit Codex normally using `/quit`. Inspect .demo/session-ended.json from another terminal.
-Source: https://learn.chatgpt.com/docs/hooks
+Changing chats is not immediate session end. Always synchronous even with async:true. No MCP tool handlers. Default timeout one second, maximum three. The displayed object is an input excerpt.
+Examples illustrate the contract rather than a recorded execution. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
 ---
 class: compact
 ---
 
-# Live lab 11
+# PreToolUse: rewriting input
 
-```sh
-sh codex-hooks-workshop/demo.sh 11
-```
+**When:** Before a supported call executes.
 
-Send a prompt, wait for a reply, then exit normally with `/quit`.
+**Input:** Original tool_input object.
 
-**The main-session end marker records reason other.**
-
-<p class="caption">A chat switch or abrupt kill is not a reliable immediate trigger.</p>
-
-```sh
-python3 codex-hooks-workshop/replay.py 11
-```
-
-<!--
-Allow 2–5 minutes for this lab depending on event setup and discussion.
-Full live action: Send a brief prompt, wait for the reply, then exit Codex normally using `/quit`. Inspect .demo/session-ended.json from another terminal.
-Expected evidence: The session-end marker records reason other.
-Caveat: Main thread only. Switching chats is not immediate session end. Abrupt process termination is not a reliable trigger; output is advisory.
-Fallback: run replay.py 11 and identify the result as synthetic contract inspection, not a runtime recording. Reset only between closed demo sessions. See LIVE-CHECKLIST.md for rehearsal evidence.
-Source: https://learn.chatgpt.com/docs/hooks
--->
-
----
-class: compact
----
-
-# 12 · Tool input rewriting
-
-**PreToolUse** · Add a default option to a known demo command.
+**Effect:** Return updatedInput with permissionDecision allow.
 
 ```json
 {"hookSpecificOutput": {
@@ -773,53 +563,26 @@ class: compact
 }}
 ```
 
-<p class="caption">Response or mechanism excerpt; read the complete hook alongside it.</p>
-
 <p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#pretooluse" target="_blank" rel="noopener noreferrer">Official PreToolUse I/O</a></p>
 
+<div class="try-it"><strong>Run <code>./demo.sh 12</code></strong> <span>(from codex-hooks-workshop/)</span><br><strong>Prompt:</strong> Run exactly python3 greet.py once.</div>
+
 <!--
-updatedInput must accompany permissionDecision allow. Bash/apply_patch require a string command. Existing input fields are preserved.
-Show 12-input-rewrite/hook.py (server.py for lab 16) and its hook configuration. Explain where the JSON fields differ from other events.
-Ask: Run exactly `python3 greet.py` once.
-Source: https://learn.chatgpt.com/docs/hooks
+Bash and apply_patch require a string command in updatedInput. Other tools use their own argument shape. Preserve other relevant fields such as timeouts.
+Examples illustrate the contract rather than a recorded execution. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
 ---
 class: compact
 ---
 
-# Live lab 12
+# PostToolUse: replacing feedback
 
-```sh
-sh codex-hooks-workshop/demo.sh 12
-```
+**When:** After a tool has already produced effects and output.
 
-Ask Codex to run exactly `python3 greet.py`.
+**Input:** tool_input and tool_response.
 
-**Hello, workshop!** comes from the rewritten command.
-
-<p class="caption">Retain other input fields; rewrite only with decision allow.</p>
-
-```sh
-python3 codex-hooks-workshop/replay.py 12
-```
-
-<!--
-Allow 2–5 minutes for this lab depending on event setup and discussion.
-Full live action: Ask: Run exactly `python3 greet.py` once.
-Expected evidence: Codex runs the replacement command and prints Hello, workshop! rather than Hello, default!.
-Caveat: updatedInput must accompany permissionDecision allow. Bash/apply_patch require a string command. Existing input fields are preserved.
-Fallback: run replay.py 12 and identify the result as synthetic contract inspection, not a runtime recording. Reset only between closed demo sessions. See LIVE-CHECKLIST.md for rehearsal evidence.
-Source: https://learn.chatgpt.com/docs/hooks
--->
-
----
-class: compact
----
-
-# 13 · Post-tool feedback
-
-**PostToolUse** · Replace feedback after a generator already ran.
+**Effect:** Replace the model-facing result with review feedback.
 
 ```json
 {
@@ -828,53 +591,26 @@ class: compact
 }
 ```
 
-<p class="caption">Response or mechanism excerpt; read the complete hook alongside it.</p>
-
 <p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#posttooluse" target="_blank" rel="noopener noreferrer">Official PostToolUse I/O</a></p>
 
+<div class="try-it"><strong>Run <code>./demo.sh 13</code></strong> <span>(from codex-hooks-workshop/)</span><br><strong>Prompt:</strong> Run exactly python3 generate.py once, then report the outcome without rerunning it.</div>
+
 <!--
-A PostToolUse block cannot undo the generated file. Code-mode promises reject for decision:block or exit 2, but continue:false has different behavior.
-Show 13-post-tool-feedback/hook.py (server.py for lab 16) and its hook configuration. Explain where the JSON fields differ from other events.
-Ask: Run exactly `python3 generate.py` once, then report the outcome without rerunning it.
-Source: https://learn.chatgpt.com/docs/hooks
+decision:block or exit 2 cannot undo side effects. In code mode, they reject the nested tool promise; continue:false replaces model-facing feedback without that rejection.
+Examples illustrate the contract rather than a recorded execution. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
 ---
 class: compact
 ---
 
-# Live lab 13
+# Background command hooks
 
-```sh
-sh codex-hooks-workshop/demo.sh 13
-```
+**When:** Alongside the operation that triggered the event.
 
-Run `python3 generate.py` once and inspect the generated file.
+**Input:** The normal event payload; handler sets async:true.
 
-**File exists; the tool result becomes review feedback.**
-
-<p class="caption">The hook cannot undo the completed generator.</p>
-
-```sh
-python3 codex-hooks-workshop/replay.py 13
-```
-
-<!--
-Allow 2–5 minutes for this lab depending on event setup and discussion.
-Full live action: Ask: Run exactly `python3 generate.py` once, then report the outcome without rerunning it.
-Expected evidence: The generated file exists and Codex receives review feedback instead of the original result.
-Caveat: A PostToolUse block cannot undo the generated file. Code-mode promises reject for decision:block or exit 2, but continue:false has different behavior.
-Fallback: run replay.py 13 and identify the result as synthetic contract inspection, not a runtime recording. Reset only between closed demo sessions. See LIVE-CHECKLIST.md for rehearsal evidence.
-Source: https://learn.chatgpt.com/docs/hooks
--->
-
----
-class: compact
----
-
-# 14 · Background execution
-
-**PostToolUse** · Move informational work off the synchronous path.
+**Effect:** Deliver information at a safe point, without controlling the operation.
 
 ```json
 {
@@ -885,53 +621,26 @@ class: compact
 }
 ```
 
-<p class="caption">Handler excerpt; full path is in the scenario config.</p>
-
 <p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#posttooluse" target="_blank" rel="noopener noreferrer">Official PostToolUse I/O</a></p>
 
+<div class="try-it"><strong>Run <code>./demo.sh 14</code></strong> <span>(from codex-hooks-workshop/)</span><br><strong>Prompt:</strong> Run exactly python3 hello.py and briefly explain its result.<br><span>Keep the session open so the delayed hook can finish.</span></div>
+
 <!--
-async:true cannot block, allow, rewrite, or request continuation. Delivery waits for a safe point; if idle, the next user turn. Unfinished work is cancelled at session end.
-Show 14-background-hook/hook.py (server.py for lab 16) and its hook configuration. Explain where the JSON fields differ from other events.
-Ask: Run exactly `python3 hello.py` and briefly explain the result. Keep the session open; inspect .demo/background-finished.txt after a second.
-Source: https://learn.chatgpt.com/docs/hooks
+Background hooks cannot deny, approve, rewrite, or request continuation. Output while idle waits for the next user turn. Session end cancels unfinished handlers. SessionEnd itself remains synchronous.
+Examples illustrate the contract rather than a recorded execution. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
 ---
 class: compact
 ---
 
-# Live lab 14
+# PreToolUse: matching file edits
 
-```sh
-sh codex-hooks-workshop/demo.sh 14
-```
+**When:** Before apply_patch executes.
 
-Run `python3 hello.py` and keep the session open.
+**Input:** tool_name is apply_patch; tool_input.command holds the patch.
 
-**A delayed completion marker appears.**
-
-<p class="caption">Background output waits for a safe point or next user turn.</p>
-
-```sh
-python3 codex-hooks-workshop/replay.py 14
-```
-
-<!--
-Allow 2–5 minutes for this lab depending on event setup and discussion.
-Full live action: Ask: Run exactly `python3 hello.py` and briefly explain the result. Keep the session open; inspect .demo/background-finished.txt after a second.
-Expected evidence: Foreground completes while a delayed hook records completion.
-Caveat: async:true cannot block, allow, rewrite, or request continuation. Delivery waits for a safe point; if idle, the next user turn. Unfinished work is cancelled at session end.
-Fallback: run replay.py 14 and identify the result as synthetic contract inspection, not a runtime recording. Reset only between closed demo sessions. See LIVE-CHECKLIST.md for rehearsal evidence.
-Source: https://learn.chatgpt.com/docs/hooks
--->
-
----
-class: compact
----
-
-# 15 · File-edit guard
-
-**PreToolUse** · Inspect an apply_patch call rather than shell execution.
+**Effect:** Inspect the patch and allow or deny the supported call.
 
 ```json
 {
@@ -943,53 +652,26 @@ class: compact
 }
 ```
 
-<p class="caption">Matcher-group excerpt; event input still reports apply_patch.</p>
-
 <p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#pretooluse" target="_blank" rel="noopener noreferrer">Official PreToolUse I/O</a></p>
 
+<div class="try-it"><strong>Run <code>./demo.sh 15</code></strong> <span>(from codex-hooks-workshop/)</span><br><strong>Prompt:</strong> Use apply_patch to change protected.txt to Changed. If blocked, report the denial and do not try another tool.</div>
+
 <!--
-Narrow header check for the exact relative path only. Shell writes and alternate spellings are outside this example. apply_patch also matches Edit and Write aliases.
-Show 15-edit-guard/hook.py (server.py for lab 16) and its hook configuration. Explain where the JSON fields differ from other events.
-Ask: Use apply_patch to change protected.txt to Changed. If blocked, report the denial and do not try another tool. Then ask apply_patch to add notes.txt.
-Source: https://learn.chatgpt.com/docs/hooks
+apply_patch matches its canonical name and Edit/Write aliases. Matcher selects the tool, not the path being edited. The handler must inspect patch content. Other write mechanisms are outside this specific match.
+Examples illustrate the contract rather than a recorded execution. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
 ---
 class: compact
 ---
 
-# Live lab 15
+# MCP tool handlers
 
-```sh
-sh codex-hooks-workshop/demo.sh 15
-```
+**When:** A matching lifecycle event calls an already-connected server.
 
-Use apply_patch to edit protected.txt, then add notes.txt.
+**Input:** Arguments expanded from the hook event.
 
-**Protected patch denied; unrelated patch allowed.**
-
-<p class="caption">Alternate paths and other write tools are outside this checker.</p>
-
-```sh
-python3 codex-hooks-workshop/replay.py 15
-```
-
-<!--
-Allow 2–5 minutes for this lab depending on event setup and discussion.
-Full live action: Ask: Use apply_patch to change protected.txt to Changed. If blocked, report the denial and do not try another tool. Then ask apply_patch to add notes.txt.
-Expected evidence: The protected patch is denied; an unrelated patch is allowed.
-Caveat: Narrow header check for the exact relative path only. Shell writes and alternate spellings are outside this example. apply_patch also matches Edit and Write aliases.
-Fallback: run replay.py 15 and identify the result as synthetic contract inspection, not a runtime recording. Reset only between closed demo sessions. See LIVE-CHECKLIST.md for rehearsal evidence.
-Source: https://learn.chatgpt.com/docs/hooks
--->
-
----
-class: compact
----
-
-# 16 · MCP tool handler
-
-**PreToolUse** · Route a policy check through an existing local MCP connection.
+**Effect:** Use the same event-specific output contract.
 
 ```json
 {
@@ -1001,53 +683,26 @@ class: compact
 }
 ```
 
-<p class="caption">Handler configuration; values are expanded from the hook event.</p>
-
 <p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#pretooluse" target="_blank" rel="noopener noreferrer">Official PreToolUse I/O</a></p>
 
+<div class="try-it"><strong>Run <code>./demo.sh 16</code></strong> <span>(from codex-hooks-workshop/)</span><br><strong>Prompt:</strong> Run exactly python3 deploy.py --env production once. If blocked, report the denial and do not retry.<br><span>The MCP server must already be connected.</span></div>
+
 <!--
-The handler does not connect servers itself. Missing servers, tool errors, and timeouts do not block. MCP handlers are synchronous and cannot handle SessionEnd.
-Show 16-mcp-handler/hook.py (server.py for lab 16) and its hook configuration. Explain where the JSON fields differ from other events.
-Check `/mcp` shows workshop_checker connected, then ask for the exact simulated production deployment command from scenario 02.
-Source: https://learn.chatgpt.com/docs/hooks
+MCP callbacks are synchronous, require an existing connection, do not ask normal tool approval, and do not trigger other hooks. Missing servers, errors, and timeout do not block. SessionEnd is unsupported.
+Examples illustrate the contract rather than a recorded execution. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
 ---
 class: compact
 ---
 
-# Live lab 16
+# PreToolUse: denial versus failure
 
-```sh
-sh codex-hooks-workshop/demo.sh 16
-```
+**When:** Before a supported call; response handling depends on the result.
 
-Confirm the MCP connection, then run the production simulation.
+**Input:** The normal tool event payload.
 
-**Local check_command returns the denial.**
-
-<p class="caption">Missing server, tool error, or timeout does not block the operation.</p>
-
-```sh
-python3 codex-hooks-workshop/replay.py 16
-```
-
-<!--
-Allow 2–5 minutes for this lab depending on event setup and discussion.
-Full live action: Check `/mcp` shows workshop_checker connected, then ask for the exact simulated production deployment command from scenario 02.
-Expected evidence: Local check_command returns a denial; .demo/events.jsonl records the decision.
-Caveat: The handler does not connect servers itself. Missing servers, tool errors, and timeouts do not block. MCP handlers are synchronous and cannot handle SessionEnd.
-Fallback: run replay.py 16 and identify the result as synthetic contract inspection, not a runtime recording. Reset only between closed demo sessions. See LIVE-CHECKLIST.md for rehearsal evidence.
-Source: https://learn.chatgpt.com/docs/hooks
--->
-
----
-class: compact
----
-
-# 17 · Failure modes
-
-**PreToolUse** · Compare explicit denial with hook failures.
+**Effect:** Explicit denial is different from a broken hook.
 
 ```text
 deny-exit    Exit 2 with a reason on stderr
@@ -1057,53 +712,26 @@ unsupported  PreToolUse continue:false
 timeout     Seven-second script, five-second handler timeout
 ```
 
-<p class="caption">Response or mechanism excerpt; read the complete hook alongside it.</p>
-
 <p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#pretooluse" target="_blank" rel="noopener noreferrer">Official PreToolUse I/O</a></p>
 
+<div class="try-it"><strong>Run <code>./demo.sh 17</code></strong> <span>(from codex-hooks-workshop/)</span><br><strong>Prompt:</strong> Run exactly python3 hello.py once.<br><span>Repeat with mode.txt set to pass, deny-exit, error, invalid-json, unsupported, or timeout.</span></div>
+
 <!--
-Do not use errors as a policy mechanism. This scenario is intentionally broken in some modes. Restore mode.txt to pass with reset before leaving it.
-Show 17-failure-modes/hook.py (server.py for lab 16) and its hook configuration. Explain where the JSON fields differ from other events.
-Keep mode.txt as pass initially. Ask for `python3 hello.py`. Then set mode.txt to deny-exit, error, invalid-json, unsupported, or timeout, review changes if prompted, and repeat the command.
-Source: https://learn.chatgpt.com/docs/hooks
+A timeout, nonzero error, malformed JSON, or unsupported field is not a universal denial mechanism. PreToolUse continue:false is unsupported and can fail without stopping execution.
+Examples illustrate the contract rather than a recorded execution. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
 ---
 class: compact
 ---
 
-# Live lab 17
+# Context size and output spilling
 
-```sh
-sh codex-hooks-workshop/demo.sh 17
-```
+**When:** When a handler returns additionalContext.
 
-Change mode.txt and repeat `python3 hello.py` for each mode.
+**Input:** A bounded context string and additionalContextLimit.
 
-**Explicit denial differs from failure or ignored output.**
-
-<p class="caption">Restore pass mode afterward; do not rely on failure for policy.</p>
-
-```sh
-python3 codex-hooks-workshop/replay.py 17
-```
-
-<!--
-Allow 2–5 minutes for this lab depending on event setup and discussion.
-Full live action: Keep mode.txt as pass initially. Ask for `python3 hello.py`. Then set mode.txt to deny-exit, error, invalid-json, unsupported, or timeout, review changes if prompted, and repeat the command.
-Expected evidence: Exit 2 is a policy denial; other modes show a failing hook or unsupported-field report. Fixtures show each response separately.
-Caveat: Do not use errors as a policy mechanism. This scenario is intentionally broken in some modes. Restore mode.txt to pass with reset before leaving it.
-Fallback: run replay.py 17 and identify the result as synthetic contract inspection, not a runtime recording. Reset only between closed demo sessions. See LIVE-CHECKLIST.md for rehearsal evidence.
-Source: https://learn.chatgpt.com/docs/hooks
--->
-
----
-class: compact
----
-
-# 18 · Large context output
-
-**SessionStart** · Demonstrate the context-output spill threshold with bounded synthetic text.
+**Effect:** Replace oversized context with a preview and saved-file reference.
 
 ```json
 {
@@ -1114,44 +742,13 @@ class: compact
 }
 ```
 
-<p class="caption">Handler excerpt; output is capped at 40 synthetic lines.</p>
-
 <p class="caption"><a href="https://learn.chatgpt.com/docs/hooks#sessionstart" target="_blank" rel="noopener noreferrer">Official SessionStart I/O</a></p>
 
-<!--
-The limit is approximate tokens, not bytes. Fixture playback verifies the text only; spilling and file references require live CLI delivery. Do not put secrets in hook output.
-Show 18-large-context/hook.py (server.py for lab 16) and its hook configuration. Explain where the JSON fields differ from other events.
-Launch a new session and ask: Read the startup reference preview and state its topic briefly without tools.
-Source: https://learn.chatgpt.com/docs/hooks
--->
-
----
-class: compact
----
-
-# Live lab 18
-
-```sh
-sh codex-hooks-workshop/demo.sh 18
-```
-
-Start a new session and ask for the startup reference topic.
-
-**Bounded context spills to a preview plus file reference.**
-
-<p class="caption">The threshold is approximate tokens; fixtures do not test spilling.</p>
-
-```sh
-python3 codex-hooks-workshop/replay.py 18
-```
+<div class="try-it"><strong>Run <code>./demo.sh 18</code></strong> <span>(from codex-hooks-workshop/)</span><br><strong>Prompt:</strong> Read the startup reference preview and state its topic briefly without tools.<br><span>Use a new session so SessionStart fires.</span></div>
 
 <!--
-Allow 2–5 minutes for this lab depending on event setup and discussion.
-Full live action: Launch a new session and ask: Read the startup reference preview and state its topic briefly without tools.
-Expected evidence: The hook returns 40 bounded synthetic reference lines; with additionalContextLimit 64, Codex should provide a shortened preview and saved-file reference.
-Caveat: The limit is approximate tokens, not bytes. Fixture playback verifies the text only; spilling and file references require live CLI delivery. Do not put secrets in hook output.
-Fallback: run replay.py 18 and identify the result as synthetic contract inspection, not a runtime recording. Reset only between closed demo sessions. See LIVE-CHECKLIST.md for rehearsal evidence.
-Source: https://learn.chatgpt.com/docs/hooks
+The threshold is approximate tokens, not bytes. Default about 2500 tokens; zero disables spilling and needs a strict output cap. Tool feedback and continuation prompts keep the default limit. Never emit sensitive context.
+Examples illustrate the contract rather than a recorded execution. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
 ---
@@ -1171,10 +768,11 @@ class: compact
 **PermissionRequest** uses `decision.behavior`, not permissionDecision.
 
 <!--
-Never copy a single generic output shape across every event. For Stop/SubagentStop, continue:false takes precedence over continuation requests. For PreToolUse, continue:false is unsupported and can result in a failure followed by execution. Compare lab 17 carefully.
-Source: https://learn.chatgpt.com/docs/hooks
+Explain how this behavior changes the agent lifecycle. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
+---
+class: compact
 ---
 
 # Background and concurrent handlers
@@ -1188,8 +786,7 @@ Source: https://learn.chatgpt.com/docs/hooks
 **SessionEnd itself remains synchronous.**
 
 <!--
-Do not treat config order as a dependency graph. If one step must precede another, perform both inside one script. Use synchronous handlers for denial, approval, rewriting, prompt rejection, and continuations. Delayed output while idle does not initiate a new turn.
-Source: https://learn.chatgpt.com/docs/hooks
+Explain how this behavior changes the agent lifecycle. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
 ---
@@ -1208,8 +805,7 @@ class: compact
 **prompt / agent handlers are parsed but skipped.**
 
 <!--
-Inactive examples are under reference/. The plugin example uses PLUGIN_ROOT. PLUGIN_DATA is writable plugin storage; compatibility aliases also exist. No global configuration or plugin is installed automatically. Managed configuration and cloud orchestration have different operational rules; the executable scope here is local Codex CLI.
-Source: https://learn.chatgpt.com/docs/hooks
+Plugin hooks can use PLUGIN_ROOT and writable PLUGIN_DATA, with compatibility aliases. Managed and cloud-orchestrated hooks have different deployment rules; these concepts concern local CLI hooks. prompt and agent handlers are parsed but skipped. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
 ---
@@ -1219,7 +815,7 @@ class: compact
 # Defaults and boundaries
 
 - Keep context concise; the default spill threshold is about 2,500 tokens
-- Use explicit short timeouts for demo scripts
+- Use explicit short timeouts for handler scripts
 - Interrupt permits 1–3 seconds; SessionEnd has a short budget
 - Treat malformed output as a failure, not an explicit policy decision
 - Avoid parsing transcript files as a stable API
@@ -1227,8 +823,7 @@ class: compact
 **Read the contract for the exact event and CLI release.**
 
 <!--
-SessionEnd defaults to one second and permits up to three; most other command hooks default to 600 seconds, which is far too long for a live workshop. additionalContextLimit zero disables spilling and should only be used with a strict output cap. Unsupported PermissionRequest fields can fail closed, while some PreToolUse invalid outputs fail without blocking; never generalize one failure mode.
-Source: https://learn.chatgpt.com/docs/hooks
+Most command hooks have a long default timeout. Interrupt and SessionEnd default to one second and allow at most three. additionalContextLimit zero disables spilling and needs a bounded output strategy. Unsupported-field failure behavior differs by event. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
 ---
@@ -1247,28 +842,25 @@ class: compact
 | Bookkeeping | Compaction / Interrupt / SessionEnd |
 
 <!--
-Ask the audience to identify the lifecycle point for one current workflow. Separate instructional guidance from runtime actions. A useful first hook is small, observable, and has tested failure behavior. These sample checkers are deliberately narrow and not enterprise enforcement policies.
-Source: https://learn.chatgpt.com/docs/hooks
+Explain how this behavior changes the agent lifecycle. Source: https://learn.chatgpt.com/docs/hooks
 -->
 
 ---
 class: compact
 ---
 
-# Sources and next steps
+# Official hook reference
 
-[Official hook contracts](https://learn.chatgpt.com/docs/hooks) · [Configuration](https://learn.chatgpt.com/docs/config-file/config-basic)
+[Every event and its input/output contract](https://learn.chatgpt.com/docs/hooks#hooks)
 
-[Plugin packaging](https://developers.openai.com/plugins/build/plugins) · [Slidev](https://github.com/slidevjs/slidev)
+[Matcher rules](https://learn.chatgpt.com/docs/hooks#matcher-patterns) · [Tool coverage](https://learn.chatgpt.com/docs/hooks#tool-coverage)
 
-**In this repository**
+[Common inputs](https://learn.chatgpt.com/docs/hooks#common-input-fields) · [Common outputs](https://learn.chatgpt.com/docs/hooks#common-output-fields)
 
-- COVERAGE.md — complete event and behavior matrix
-- Each scenario README — exact prompt and observable evidence
-- LIVE-CHECKLIST.md — record actual runtime rehearsal
-- replay.py — isolated synthetic contract inspection
+[Trust review](https://learn.chatgpt.com/docs/hooks#review-and-trust-hooks) · [MCP handlers](https://learn.chatgpt.com/docs/hooks#mcp-tool-hooks)
+
+<p class="caption">Local Codex CLI behavior · Reference checked 5 November 2026</p>
 
 <!--
-Official documentation consulted 2026-11-04. The 14 event names also appear in the local 0.166.0 generated app-server ManagedHooksRequirements schema; see reference/support-snapshot.json. Schema and fixture checks do not prove live delivery. MCP server protocol references: https://modelcontextprotocol.io/specification/2025-11-25/basic/transports and https://modelcontextprotocol.io/specification/2025-11-25/server/tools. Source for slide authoring: https://sli.dev/guide/syntax.html. Follow the rehearsal checklist before presenting.
-Source: https://learn.chatgpt.com/docs/hooks
+Use the official release-behavior guide. Main-branch generated schemas can contain behavior not yet released.
 -->

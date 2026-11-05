@@ -1,0 +1,12 @@
+{
+  "id": "04",
+  "directory": "04-prompt-filter",
+  "title": "Prompt filtering",
+  "events": [
+    "UserPromptSubmit"
+  ],
+  "use_case": "Reject a synthetic sensitive marker and add task context.",
+  "action": "Submit: Explain DEMO_SECRET_123. Observe rejection. Then submit: Explain how you would investigate a failing test.",
+  "evidence": "First prompt is blocked; the second receives brief explanation guidance.",
+  "caveat": "Only a synthetic marker is checked. Matcher is ignored for UserPromptSubmit. Never paste real credentials in the demo."
+}

@@ -1,0 +1,12 @@
+{
+  "id": "01",
+  "directory": "01-session-context",
+  "title": "Startup context",
+  "events": [
+    "SessionStart"
+  ],
+  "use_case": "Supply runtime environment information.",
+  "action": "Ask: Which deployment environment is selected? Answer without using tools.",
+  "evidence": "Codex answers staging from hook context.",
+  "caveat": "Restart after hook review. Match startup, resume, clear, compact, or fork when needed; this example matches startup and resume."
+}

@@ -1,0 +1,16 @@
+{
+  "id": "05",
+  "directory": "05-permission-request",
+  "title": "Permission decisions",
+  "events": [
+    "PermissionRequest"
+  ],
+  "use_case": "Decide only when Codex is about to request approval.",
+  "action": "Launch this scenario in read-only sandbox mode (the launcher does this). Ask: Execute exactly `python3 write_marker.py`; if the sandbox rejects the write, request approval to rerun it with elevated permissions. Do not use another mechanism.",
+  "evidence": "PermissionRequest denies the escalation and .demo/write-marker.txt remains absent.",
+  "caveat": "Depends on approval policy and a real escalation. No approval request means no event. policy.txt can be deny, allow, or abstain; restart after changes if required by trust review. Allow is restricted to the exact local simulation command.",
+  "launch": {
+    "sandbox": "read-only",
+    "approval": "on-request"
+  }
+}

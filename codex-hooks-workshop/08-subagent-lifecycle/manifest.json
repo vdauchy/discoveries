@@ -1,0 +1,13 @@
+{
+  "id": "08",
+  "directory": "08-subagent-lifecycle",
+  "title": "Subagent lifecycle",
+  "events": [
+    "SubagentStart",
+    "SubagentStop"
+  ],
+  "use_case": "Give reviewers instructions and request a missing verification note.",
+  "action": "Ask: Spawn one read-only subagent to inspect this scenario README and report a short summary. Have it state what tests it ran or did not run. Wait for it to finish.",
+  "evidence": "Journal contains SubagentStart and SubagentStop with the child identifier; report includes Tests:.",
+  "caveat": "Requires subagents enabled and an actual spawned child. A conforming report needs no retry; the missing-Tests fixture demonstrates continuation deterministically. SubagentStart cannot stop a child via continue:false."
+}

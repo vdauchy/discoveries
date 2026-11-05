@@ -3,7 +3,8 @@ from pathlib import Path
 import shutil
 
 root = Path(__file__).resolve().parent
-for folder in root.glob("[0-9][0-9]-*"):
+for manifest in root.glob("*/manifest.json"):
+    folder = manifest.parent
     if not folder.is_dir() or folder.is_symlink():
         continue
     state = folder / ".demo"

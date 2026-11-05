@@ -71,10 +71,15 @@ def run_case(scenario, case):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("scenario", help="Directory name, numeric prefix, or all")
+    parser.add_argument("scenario", help="Directory name, manifest ID, or all")
     args = parser.parse_args()
-    folders = sorted(ROOT.glob("[0-9][0-9]-*"))
-    selected = folders if args.scenario == "all" else [p for p in folders if p.name == args.scenario or p.name.split("-")[0] == args.scenario]
+    from demo import discover
+    try:
+        scenarios = discover()
+    except ValueError as error:
+        parser.error(str(error))
+    selected = [ROOT / item["directory"] for item in scenarios
+                if args.scenario in ("all", item["directory"], item["id"])]
     if not selected:
         parser.error("Unknown scenario")
     count = 0
